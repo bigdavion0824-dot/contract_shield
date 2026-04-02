@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -200,6 +201,7 @@ class AppAnalytics {
       await prefs.setInt(countKey, count + 1);
 
       debugPrint('analytics event: $entry');
+      unawaited(TelemetryRelay.sendEvent(eventName, params: params ?? {}));
     } catch (e) {
       debugPrint('logEvent failed: $e');
       unawaited(RuntimeDiagnostics.recordError('analytics_log_event', e));
@@ -280,6 +282,7 @@ class RuntimeDiagnostics {
         list.removeRange(0, list.length - 120);
       }
       await prefs.setStringList(_errorsKey, list);
+      unawaited(TelemetryRelay.sendError(scope, error, stackTrace));
     } catch (e) {
       debugPrint('recordError failed: $e');
     }
@@ -301,6 +304,81 @@ class RuntimeDiagnostics {
       await prefs.setStringList(_errorsKey, []);
     } catch (e) {
       debugPrint('clearErrors failed: $e');
+    }
+  }
+}
+
+class TelemetryRelay {
+  static const String _endpoint = String.fromEnvironment(
+    'TELEMETRY_ENDPOINT',
+    defaultValue: '',
+  );
+
+  static bool get _enabled => _endpoint.trim().isNotEmpty && !kIsWeb;
+
+  static Future<void> sendEvent(
+    String eventName, {
+    Map<String, String>? params,
+  }) async {
+    if (!_enabled) {
+      return;
+    }
+
+    final payload = <String, Object?>{
+      'type': 'event',
+      'ts': DateTime.now().toUtc().toIso8601String(),
+      'name': eventName,
+      'params': params ?? <String, String>{},
+      'appVersion': AppMeta.version,
+      'buildLabel': AppMeta.buildLabel,
+      'platform': defaultTargetPlatform.name,
+    };
+    await _post(payload);
+  }
+
+  static Future<void> sendError(
+    String scope,
+    Object error, [
+    StackTrace? stackTrace,
+  ]) async {
+    if (!_enabled) {
+      return;
+    }
+
+    final payload = <String, Object?>{
+      'type': 'error',
+      'ts': DateTime.now().toUtc().toIso8601String(),
+      'scope': scope,
+      'error': error.toString(),
+      'stack': stackTrace?.toString(),
+      'appVersion': AppMeta.version,
+      'buildLabel': AppMeta.buildLabel,
+      'platform': defaultTargetPlatform.name,
+    };
+    await _post(payload);
+  }
+
+  static Future<void> _post(Map<String, Object?> payload) async {
+    HttpClient? client;
+    try {
+      final uri = Uri.tryParse(_endpoint);
+      if (uri == null || !uri.hasScheme) {
+        return;
+      }
+
+      client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
+      final req = await client.postUrl(uri).timeout(const Duration(seconds: 8));
+      req.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
+      req.write(jsonEncode(payload));
+
+      final res = await req.close().timeout(const Duration(seconds: 8));
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        debugPrint('Telemetry relay non-2xx status: ${res.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Telemetry relay send failed: $e');
+    } finally {
+      client?.close(force: true);
     }
   }
 }

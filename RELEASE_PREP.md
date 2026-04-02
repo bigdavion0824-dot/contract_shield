@@ -128,6 +128,15 @@ Before submission, confirm:
 
 ## Code Signing Steps (Required)
 
+## Optional Production Telemetry (Recommended)
+
+- Configure a secure HTTPS endpoint to receive JSON telemetry events/errors
+- Build with dart define:
+	- `flutter build appbundle --release --dart-define=TELEMETRY_ENDPOINT=https://your-endpoint.example.com/ingest`
+	- `flutter build ios --release --no-codesign --dart-define=TELEMETRY_ENDPOINT=https://your-endpoint.example.com/ingest`
+- Verify endpoint receives records with `type=event` and `type=error`
+- Do not include secrets in the endpoint URL
+
 ### Android (Play Store)
 
 - Copy `android/key.properties.example` to `android/key.properties`
