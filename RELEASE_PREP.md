@@ -126,6 +126,25 @@ Before submission, confirm:
 - device QA signoff
 - final published store assets and support information
 
+## Code Signing Steps (Required)
+
+### Android (Play Store)
+
+- Copy `android/key.properties.example` to `android/key.properties`
+- Fill `storePassword`, `keyPassword`, `keyAlias`, and `storeFile`
+- Confirm `android/key.properties` is not committed
+- Run `flutter build appbundle --release`
+- Upload `build/app/outputs/bundle/release/app-release.aab` to Play Console
+
+### iOS (App Store)
+
+- Open `ios/Runner.xcworkspace` in Xcode
+- Select the `Runner` target, then `Signing & Capabilities`
+- Set your Apple Team and enable automatic signing (or assign a distribution profile)
+- Ensure Bundle Identifier and provisioning profile match App Store Connect
+- Build archive from Xcode: `Product > Archive`
+- Upload to App Store Connect and validate in TestFlight
+
 ## Release Recommendation
 
 Treat the current build as a strong beta or release candidate, not a fully public launch build, until the external blockers above are closed.
