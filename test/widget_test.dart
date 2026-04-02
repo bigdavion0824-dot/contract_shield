@@ -1,30 +1,51 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter_application_1/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
+  testWidgets('App boots and shows Contract Shield home UI', (
+    WidgetTester tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'releaseSafeMode': false});
+
     await tester.pumpWidget(const MyApp());
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('Contract Shield'), findsWidgets);
+    expect(find.text('Store Submission Text'), findsOneWidget);
+    expect(find.text('Runtime Diagnostics'), findsOneWidget);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  testWidgets('Release-safe mode hides debug-only home actions', (
+    WidgetTester tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'releaseSafeMode': true});
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    await tester.pumpWidget(const MyApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Store Submission Text'), findsOneWidget);
+    expect(find.text('Analytics Dashboard (Debug)'), findsNothing);
+    expect(find.text('Runtime Diagnostics'), findsNothing);
+  });
+
+  test('Runtime diagnostics stores and clears errors', () async {
+    await RuntimeDiagnostics.clearErrors();
+    await RuntimeDiagnostics.recordError('test_scope', 'sample_error');
+
+    final entries = await RuntimeDiagnostics.getRecentErrors();
+    expect(entries.isNotEmpty, isTrue);
+    expect(entries.last.contains('test_scope'), isTrue);
+
+    await RuntimeDiagnostics.clearErrors();
+    final afterClear = await RuntimeDiagnostics.getRecentErrors();
+    expect(afterClear, isEmpty);
   });
 }
