@@ -896,6 +896,19 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _openPremiumWithFeedback() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(milliseconds: 900),
+        content: Text(
+          widget.language == 'fr' ? 'Ouverture Premium…' : 'Opening Premium…',
+        ),
+      ),
+    );
+    _upgradeToPremium();
+  }
+
   void _showPremiumDialog() {
     showDialog(
       context: context,
@@ -910,7 +923,7 @@ class _HomePageState extends State<HomePage> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              _upgradeToPremium();
+              _openPremiumWithFeedback();
             },
             child: const Text('View Plans'),
           ),
@@ -2209,12 +2222,10 @@ class _HomePageState extends State<HomePage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: ElevatedButton.icon(
-                      onPressed: _upgradeToPremium,
+                      onPressed: _openPremiumWithFeedback,
                       icon: const Icon(Icons.star),
                       label: const Text('Unlock Premium'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
                         minimumSize: const Size(double.infinity, 50),
                       ),
                     ),
@@ -2263,6 +2274,24 @@ class TipsPage extends StatelessWidget {
 
   String _getString(String key) => AppStrings.get(key, language);
 
+  void _showTipDetails(BuildContext context, int index, String tip) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(
+          language == 'fr' ? 'Conseil ${index + 1}' : 'Tip ${index + 1}',
+        ),
+        content: Text(tip),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(language == 'fr' ? 'Fermer' : 'Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tips = [
@@ -2309,51 +2338,58 @@ class TipsPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               elevation: 4,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border(
-                    left: BorderSide(color: colors[index], width: 5),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _showTipDetails(context, index, tips[index]),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border(
+                      left: BorderSide(color: colors[index], width: 5),
+                    ),
                   ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: colors[index].withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: colors[index].withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            icons[index],
+                            color: colors[index],
+                            size: 28,
+                          ),
                         ),
-                        child: Icon(
-                          icons[index],
-                          color: colors[index],
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Tip ${index + 1}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: colors[index],
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Tip ${index + 1}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: colors[index],
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              tips[index],
-                              style: const TextStyle(fontSize: 14, height: 1.5),
-                            ),
-                          ],
+                              const SizedBox(height: 4),
+                              Text(
+                                tips[index],
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -3678,6 +3714,27 @@ class FeaturesOverviewPage extends StatelessWidget {
 
   const FeaturesOverviewPage({super.key, this.language = 'en'});
 
+  void _showFeatureDetails(
+    BuildContext context,
+    String title,
+    String desc,
+    Color color,
+  ) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: Text(desc),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(language == 'fr' ? 'Fermer' : 'Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isFr = language == 'fr';
@@ -3818,7 +3875,12 @@ class FeaturesOverviewPage extends StatelessWidget {
                           ),
                         );
                       }
-                    : null,
+                    : () => _showFeatureDetails(
+                        context,
+                        feature.title,
+                        feature.desc,
+                        feature.color,
+                      ),
                 leading: CircleAvatar(
                   backgroundColor: feature.color,
                   foregroundColor: Colors.white,
@@ -4193,7 +4255,7 @@ class _HomeBuyingCostsPageState extends State<HomeBuyingCostsPage> {
         return transferTax < 4000 ? transferTax : 4000;
       case 'BC':
         if (price <= 500000) return transferTax;
-        if (price >= 525000) return 0;
+        if (price > 525000) return 0;
         final factor = (525000 - price) / 25000;
         return transferTax * factor;
       case 'QC':
