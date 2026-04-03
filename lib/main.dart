@@ -864,32 +864,35 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _upgradeToPremium() async {
+  Future<T?> _safePush<T>(Route<T> route, String scope) async {
     try {
-      final unlocked = await Navigator.push<bool>(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PaywallPage(language: widget.language),
-        ),
-      );
-
-      if (unlocked == true && mounted) {
-        setState(() => isPremium = true);
-      }
+      return await Navigator.of(context, rootNavigator: true).push(route);
     } catch (e, st) {
-      unawaited(
-        RuntimeDiagnostics.recordError('upgrade_to_premium_nav', e, st),
-      );
-      if (!mounted) return;
+      unawaited(RuntimeDiagnostics.recordError(scope, e, st));
+      if (!mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             widget.language == 'fr'
-                ? 'Impossible d\'ouvrir l\'écran premium. Réessayez.'
-                : 'Could not open the premium screen. Please try again.',
+                ? 'Navigation indisponible. Réessayez.'
+                : 'Navigation unavailable. Please try again.',
           ),
         ),
       );
+      return null;
+    }
+  }
+
+  void _upgradeToPremium() async {
+    final unlocked = await _safePush<bool>(
+      MaterialPageRoute(
+        builder: (context) => PaywallPage(language: widget.language),
+      ),
+      'upgrade_to_premium_nav',
+    );
+
+    if (unlocked == true && mounted) {
+      setState(() => isPremium = true);
     }
   }
 
@@ -942,11 +945,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _navigateToFeaturesOverview() {
-    Navigator.push(
-      context,
+    _safePush<void>(
       MaterialPageRoute(
         builder: (context) => FeaturesOverviewPage(language: widget.language),
       ),
+      'navigate_features_overview',
     );
   }
 
