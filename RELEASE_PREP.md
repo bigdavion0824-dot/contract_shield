@@ -98,8 +98,8 @@ Suggested French terms:
 
 The current paywall links point to:
 
-- Privacy Policy: `https://bigdavion0824-dot.github.io/contract-shield/legal/privacy.html`
-- Terms of Use: `https://bigdavion0824-dot.github.io/contract-shield/legal/terms.html`
+- Privacy Policy: `https://bigdavion0824-dot.github.io/contract_shield/legal/privacy.html`
+- Terms of Use: `https://bigdavion0824-dot.github.io/contract_shield/legal/terms.html`
 
 Before submission, confirm:
 
