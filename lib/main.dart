@@ -865,15 +865,31 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _upgradeToPremium() async {
-    final unlocked = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PaywallPage(language: widget.language),
-      ),
-    );
+    try {
+      final unlocked = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PaywallPage(language: widget.language),
+        ),
+      );
 
-    if (unlocked == true && mounted) {
-      setState(() => isPremium = true);
+      if (unlocked == true && mounted) {
+        setState(() => isPremium = true);
+      }
+    } catch (e, st) {
+      unawaited(
+        RuntimeDiagnostics.recordError('upgrade_to_premium_nav', e, st),
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.language == 'fr'
+                ? 'Impossible d\'ouvrir l\'écran premium. Réessayez.'
+                : 'Could not open the premium screen. Please try again.',
+          ),
+        ),
+      );
     }
   }
 
@@ -3663,7 +3679,7 @@ class FeaturesOverviewPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final isFr = language == 'fr';
 
-    final localizedFeatures = <({String title, String desc, IconData icon, Color color})>[
+    final localizedFeatures = <({String title, String desc, IconData icon, Color color, bool opensPaywall})>[
       (
         title: isFr ? 'Calculateur d\'économies' : 'Savings Calculator',
         desc: isFr
@@ -3671,6 +3687,7 @@ class FeaturesOverviewPage extends StatelessWidget {
             : 'Estimate commission and closing-cost savings in real time.',
         icon: Icons.calculate,
         color: const Color(0xFF2E7D32),
+        opensPaywall: false,
       ),
       (
         title: isFr ? 'Paramètres provinciaux' : 'Province Defaults',
@@ -3679,6 +3696,7 @@ class FeaturesOverviewPage extends StatelessWidget {
             : 'Uses Canada province-specific default commission and closing-cost rates.',
         icon: Icons.map,
         color: const Color(0xFF1565C0),
+        opensPaywall: false,
       ),
       (
         title: isFr ? 'Sauvegarde et historique' : 'Save & History',
@@ -3687,6 +3705,7 @@ class FeaturesOverviewPage extends StatelessWidget {
             : 'Save calculations and review them later in the History screen.',
         icon: Icons.history,
         color: const Color(0xFF6A1B9A),
+        opensPaywall: false,
       ),
       (
         title: isFr ? 'PDF d\'avis de résiliation' : 'Termination Notice PDF',
@@ -3695,6 +3714,7 @@ class FeaturesOverviewPage extends StatelessWidget {
             : 'Generate and share a formal Notice of Termination PDF.',
         icon: Icons.picture_as_pdf,
         color: const Color(0xFFC62828),
+        opensPaywall: false,
       ),
       (
         title: isFr ? 'Scanner de contrat' : 'Contract Scanner',
@@ -3703,6 +3723,7 @@ class FeaturesOverviewPage extends StatelessWidget {
             : 'Scan contract images and flag risky words like irrevocable clauses. Camera on mobile, gallery on desktop.',
         icon: Icons.document_scanner,
         color: const Color(0xFFEF6C00),
+        opensPaywall: false,
       ),
       (
         title: isFr
@@ -3713,6 +3734,7 @@ class FeaturesOverviewPage extends StatelessWidget {
             : 'Premium tool to estimate minimum down payment, the 20% target, and key home-buying expenses.',
         icon: Icons.account_balance_wallet,
         color: const Color(0xFF2E7D32),
+        opensPaywall: false,
       ),
       (
         title: isFr ? 'Matrice QA acheteur' : 'Buyer QA Matrix',
@@ -3721,6 +3743,7 @@ class FeaturesOverviewPage extends StatelessWidget {
             : 'Quick validation scenarios for first-time and repeat buyers in ON, QC, and BC.',
         icon: Icons.rule_folder_outlined,
         color: const Color(0xFF455A64),
+        opensPaywall: false,
       ),
       (
         title: isFr ? 'Conseils vendeur' : 'Home Selling Tips',
@@ -3729,6 +3752,7 @@ class FeaturesOverviewPage extends StatelessWidget {
             : 'Guided tips for selling without a listing agent.',
         icon: Icons.lightbulb,
         color: const Color(0xFFF9A825),
+        opensPaywall: false,
       ),
       (
         title: isFr ? 'Anglais / Français' : 'English / French',
@@ -3737,6 +3761,7 @@ class FeaturesOverviewPage extends StatelessWidget {
             : 'Switch language from the app menu.',
         icon: Icons.language,
         color: const Color(0xFF00838F),
+        opensPaywall: false,
       ),
       (
         title: isFr ? 'Mise à niveau Premium' : 'Premium Upgrade',
@@ -3745,6 +3770,7 @@ class FeaturesOverviewPage extends StatelessWidget {
             : 'Free plan has limits; premium unlocks unlimited saved calculations.',
         icon: Icons.workspace_premium,
         color: const Color(0xFF8D6E63),
+        opensPaywall: true,
       ),
     ];
 
@@ -3779,6 +3805,17 @@ class FeaturesOverviewPage extends StatelessWidget {
             (feature) => Card(
               margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
+                onTap: feature.opensPaywall
+                    ? () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                PaywallPage(language: language),
+                          ),
+                        );
+                      }
+                    : null,
                 leading: CircleAvatar(
                   backgroundColor: feature.color,
                   foregroundColor: Colors.white,
@@ -3803,6 +3840,9 @@ class FeaturesOverviewPage extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(feature.desc),
                 ),
+                trailing: feature.opensPaywall
+                    ? const Icon(Icons.open_in_new, size: 18)
+                    : null,
               ),
             ),
           ),
