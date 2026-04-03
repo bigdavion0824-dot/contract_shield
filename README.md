@@ -28,6 +28,7 @@ Contract Shield is a bilingual Flutter app focused on consumer real-estate workf
 - `APP_FEATURES.md`: feature inventory and product status
 - `ADMOB_IAP_SETUP.md`: AdMob and in-app purchase configuration notes
 - `RELEASE_PREP.md`: store copy, screenshot plan, and launch checklist
+- `TELEMETRY_SETUP.md`: optional production telemetry receiver and app wiring
 
 ## Development
 

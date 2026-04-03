@@ -192,6 +192,7 @@ Once per week, review:
 ## 9) Minimum Tooling to Keep Active
 
 - Store console crash dashboards
+- Optional telemetry receiver / remote error endpoint
 - In-app Runtime Diagnostics page
 - In-app System Health Check page
 - Analytics Dashboard (debug/internal use)
