@@ -418,8 +418,8 @@ class ConnectivityService {
 class AppLinks {
   static const String legalBaseUrl =
       'https://bigdavion0824-dot.github.io/contract_shield/legal';
-  static const String privacyUrl = '$legalBaseUrl/privacy.html';
-  static const String termsUrl = '$legalBaseUrl/terms.html';
+  static const String privacyUrl = '$legalBaseUrl/privacy.html?v=20260403';
+  static const String termsUrl = '$legalBaseUrl/terms.html?v=20260403';
 }
 
 class AppMeta {
