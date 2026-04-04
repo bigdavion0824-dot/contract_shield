@@ -724,6 +724,7 @@ class _HomePageState extends State<HomePage> {
   double _sellerLegalNotaryShare = 0.28;
   double _sellerMortgageDischargeShare = 0.17;
   double _sellerMovingSetupShare = 0.30;
+  double _listingAgentShare = 0.50;
   bool _closingCostsAutoFilled = false;
   bool closingCostsManuallyEdited = false;
   List<String> savedCalculations = [];
@@ -809,9 +810,11 @@ class _HomePageState extends State<HomePage> {
     return _calculatedPropertyValue * (_calculatedCommissionRate / 100);
   }
 
-  double get _listingAgentCommission => commissionSavings * 0.5;
+  double get _buyerAgentShare => 1 - _listingAgentShare;
 
-  double get _buyerAgentCommission => commissionSavings * 0.5;
+  double get _listingAgentCommission => commissionSavings * _listingAgentShare;
+
+  double get _buyerAgentCommission => commissionSavings * _buyerAgentShare;
 
   double get autoClosingCosts {
     return _calculatedPropertyValue *
@@ -1940,11 +1943,11 @@ class _HomePageState extends State<HomePage> {
                       '\$${commissionSavings.toStringAsFixed(2)}',
                     ),
                     _savingsRow(
-                      'Listing agent commission (est.)',
+                      'Listing agent commission (${(_listingAgentShare * 100).toStringAsFixed(1)}%)',
                       '\$${_listingAgentCommission.toStringAsFixed(2)}',
                     ),
                     _savingsRow(
-                      'Buyer agent commission (est.)',
+                      'Buyer agent commission (${(_buyerAgentShare * 100).toStringAsFixed(1)}%)',
                       '\$${_buyerAgentCommission.toStringAsFixed(2)}',
                     ),
                     const Divider(height: 1),
@@ -1983,12 +1986,19 @@ class _HomePageState extends State<HomePage> {
                         style: TextStyle(fontSize: 12, color: Colors.black54),
                       ),
                     ),
+                    _sellerShareSlider(
+                      label: 'Listing agent split',
+                      value: _listingAgentShare,
+                      onChanged: (value) {
+                        setState(() => _listingAgentShare = value);
+                      },
+                    ),
                     _savingsRow(
-                      'Listing agent commission (est.)',
+                      'Listing agent commission (${(_listingAgentShare * 100).toStringAsFixed(1)}%)',
                       '\$${_listingAgentCommission.toStringAsFixed(2)}',
                     ),
                     _savingsRow(
-                      'Buyer agent commission (est.)',
+                      'Buyer agent commission (${(_buyerAgentShare * 100).toStringAsFixed(1)}%)',
                       '\$${_buyerAgentCommission.toStringAsFixed(2)}',
                     ),
                     const Divider(height: 20),
