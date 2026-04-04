@@ -730,6 +730,7 @@ class _HomePageState extends State<HomePage> {
   double _sellerMortgageDischargeShare = 0.17;
   double _sellerMovingSetupShare = 0.30;
   double _listingAgentShare = 0.50;
+  bool _commissionAutoFilled = false;
   bool _closingCostsAutoFilled = false;
   bool closingCostsManuallyEdited = false;
   List<String> savedCalculations = [];
@@ -1004,6 +1005,15 @@ class _HomePageState extends State<HomePage> {
 
     final provinceRate =
         CanadaProvinceRates.defaults[selectedProvince]?.closingCostRate ?? 1.5;
+    if (commissionAmount.trim().isEmpty && _liveCommissionEstimate != null) {
+      final autoCommission = _liveCommissionEstimate!.toStringAsFixed(2);
+      _commissionAmountController.value = TextEditingValue(
+        text: autoCommission,
+        selection: TextSelection.collapsed(offset: autoCommission.length),
+      );
+      commissionAmount = autoCommission;
+      _commissionAutoFilled = true;
+    }
     final manualCommission = _parseLooseNumber(commissionAmount);
     if (closingCosts.trim().isEmpty && _liveAutoClosingCost != null) {
       final autoEstimate = _liveAutoClosingCost!.toStringAsFixed(2);
@@ -1027,7 +1037,9 @@ class _HomePageState extends State<HomePage> {
       _calculatedPropertyValue = parsedPropertyValue;
       _calculatedCommissionRate = commissionRate;
       _usedManualCommission =
-          commissionAmount.trim().isNotEmpty && manualCommission != null;
+          !_commissionAutoFilled &&
+          commissionAmount.trim().isNotEmpty &&
+          manualCommission != null;
       _calculatedManualCommission = manualCommission ?? 0;
       _calculatedProvince = selectedProvince;
       _calculatedProvinceClosingCostRate = provinceRate;
@@ -1606,6 +1618,7 @@ class _HomePageState extends State<HomePage> {
       closingCosts = '';
       commissionAmount = '';
       remainingMortgageBalance = '';
+      _commissionAutoFilled = false;
       _closingCostsAutoFilled = false;
       closingCostsManuallyEdited = false;
       _hasCalculated = false;
@@ -1785,6 +1798,18 @@ class _HomePageState extends State<HomePage> {
                     keyboardType: TextInputType.number,
                     onChanged: (value) => setState(() {
                       propertyValue = value;
+                      if (_commissionAutoFilled &&
+                          _liveCommissionEstimate != null) {
+                        final autoCommission = _liveCommissionEstimate!
+                            .toStringAsFixed(2);
+                        _commissionAmountController.value = TextEditingValue(
+                          text: autoCommission,
+                          selection: TextSelection.collapsed(
+                            offset: autoCommission.length,
+                          ),
+                        );
+                        commissionAmount = autoCommission;
+                      }
                       if (_closingCostsAutoFilled &&
                           _liveAutoClosingCost != null) {
                         final autoEstimate = _liveAutoClosingCost!
@@ -1905,13 +1930,15 @@ class _HomePageState extends State<HomePage> {
                       ),
                       onChanged: (value) => setState(() {
                         commissionAmount = value;
+                        _commissionAutoFilled = false;
                       }),
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                     child: Text(
-                      commissionAmount.trim().isNotEmpty
+                      commissionAmount.trim().isNotEmpty &&
+                              !_commissionAutoFilled
                           ? 'Using manual real estate commission amount.'
                           : (_liveCommissionEstimate == null
                                 ? 'Commission estimate will appear after entering sale price.'
