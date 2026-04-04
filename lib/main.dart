@@ -706,6 +706,8 @@ class _HomePageState extends State<HomePage> {
   double commissionRate = 5.0;
   final TextEditingController _commissionRateController =
       TextEditingController();
+  final TextEditingController _closingCostsController =
+      TextEditingController();
   String closingCosts = '';
   String selectedProvince = 'ON';
   bool _hasCalculated = false;
@@ -718,6 +720,7 @@ class _HomePageState extends State<HomePage> {
   double _sellerLegalNotaryShare = 0.28;
   double _sellerMortgageDischargeShare = 0.17;
   double _sellerMovingSetupShare = 0.30;
+  bool _closingCostsAutoFilled = false;
   bool closingCostsManuallyEdited = false;
   List<String> savedCalculations = [];
   bool isPremium = false;
@@ -965,6 +968,17 @@ class _HomePageState extends State<HomePage> {
 
     final provinceRate =
         CanadaProvinceRates.defaults[selectedProvince]?.closingCostRate ?? 1.5;
+    if (closingCosts.trim().isEmpty && _liveAutoClosingCost != null) {
+      final autoEstimate = _liveAutoClosingCost!.toStringAsFixed(2);
+      _closingCostsController.value = TextEditingValue(
+        text: autoEstimate,
+        selection: TextSelection.collapsed(offset: autoEstimate.length),
+      );
+      closingCosts = autoEstimate;
+      _closingCostsAutoFilled = true;
+      closingCostsManuallyEdited = false;
+    }
+
     final manualClosingCosts = _parseLooseNumber(closingCosts);
 
     if (!_hasCalculated || _calculatedProvince != selectedProvince) {
@@ -978,7 +992,9 @@ class _HomePageState extends State<HomePage> {
       _calculatedProvince = selectedProvince;
       _calculatedProvinceClosingCostRate = provinceRate;
       _usedManualClosingCosts =
-          closingCosts.trim().isNotEmpty && manualClosingCosts != null;
+          !_closingCostsAutoFilled &&
+          closingCosts.trim().isNotEmpty &&
+          manualClosingCosts != null;
       _calculatedManualClosingCosts = manualClosingCosts ?? 0;
     });
   }
@@ -1556,6 +1572,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _commissionRateController.dispose();
+    _closingCostsController.dispose();
     _purchaseSubscription?.cancel();
     bannerAd?.dispose();
     AdMobHelper.dispose();
@@ -1710,11 +1727,25 @@ class _HomePageState extends State<HomePage> {
                       filled: false,
                     ),
                     keyboardType: TextInputType.number,
-                    onChanged: (value) => setState(() => propertyValue = value),
+                    onChanged: (value) => setState(() {
+                      propertyValue = value;
+                      if (_closingCostsAutoFilled && _liveAutoClosingCost != null) {
+                        final autoEstimate = _liveAutoClosingCost!
+                            .toStringAsFixed(2);
+                        _closingCostsController.value = TextEditingValue(
+                          text: autoEstimate,
+                          selection: TextSelection.collapsed(
+                            offset: autoEstimate.length,
+                          ),
+                        );
+                        closingCosts = autoEstimate;
+                      }
+                    }),
                   ),
                   const Divider(height: 1),
                   // Closing costs
                   TextFormField(
+                    controller: _closingCostsController,
                     decoration: InputDecoration(
                       labelText: _getString('closingCosts'),
                       prefixIcon: const Icon(Icons.attach_money),
@@ -1725,6 +1756,7 @@ class _HomePageState extends State<HomePage> {
                     keyboardType: TextInputType.number,
                     onChanged: (value) => setState(() {
                       closingCosts = value;
+                      _closingCostsAutoFilled = false;
                       closingCostsManuallyEdited = value.trim().isNotEmpty;
                     }),
                   ),
