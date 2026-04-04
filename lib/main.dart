@@ -1864,7 +1864,9 @@ class _HomePageState extends State<HomePage> {
                         '\$${closingCostSavings.toStringAsFixed(2)}',
                       ),
                     ],
-                    const Divider(height: 20),
+                  ]),
+                  _sectionHeader('Seller Cost Breakdown'),
+                  _sectionCard([
                     const Padding(
                       padding: EdgeInsets.symmetric(
                         horizontal: 16,
