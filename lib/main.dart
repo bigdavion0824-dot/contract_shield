@@ -20,30 +20,30 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-    debugPrint('Flutter framework error: ${details.exceptionAsString()}');
-    unawaited(
-      RuntimeDiagnostics.recordError(
-        'flutter_framework',
-        details.exception,
-        details.stack,
-      ),
-    );
-  };
-
-  PlatformDispatcher.instance.onError = (error, stack) {
-    debugPrint('Uncaught async/platform error: $error');
-    unawaited(
-      RuntimeDiagnostics.recordError('platform_dispatcher', error, stack),
-    );
-    return true;
-  };
-
   await runZonedGuarded(
     () async {
+      WidgetsFlutterBinding.ensureInitialized();
+
+      FlutterError.onError = (FlutterErrorDetails details) {
+        FlutterError.presentError(details);
+        debugPrint('Flutter framework error: ${details.exceptionAsString()}');
+        unawaited(
+          RuntimeDiagnostics.recordError(
+            'flutter_framework',
+            details.exception,
+            details.stack,
+          ),
+        );
+      };
+
+      PlatformDispatcher.instance.onError = (error, stack) {
+        debugPrint('Uncaught async/platform error: $error');
+        unawaited(
+          RuntimeDiagnostics.recordError('platform_dispatcher', error, stack),
+        );
+        return true;
+      };
+
       ConnectivityService.init();
       if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
         try {
