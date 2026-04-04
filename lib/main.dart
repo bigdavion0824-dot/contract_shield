@@ -708,6 +708,13 @@ class _HomePageState extends State<HomePage> {
       TextEditingController();
   String closingCosts = '';
   String selectedProvince = 'ON';
+  bool _hasCalculated = false;
+  double _calculatedPropertyValue = 0;
+  double _calculatedCommissionRate = 5.0;
+  String _calculatedProvince = 'ON';
+  double _calculatedProvinceClosingCostRate = 1.5;
+  bool _usedManualClosingCosts = false;
+  double _calculatedManualClosingCosts = 0;
   bool closingCostsManuallyEdited = false;
   List<String> savedCalculations = [];
   bool isPremium = false;
@@ -786,20 +793,17 @@ class _HomePageState extends State<HomePage> {
   }
 
   double get commissionSavings {
-    double value = double.tryParse(propertyValue) ?? 0;
-    return value * (commissionRate / 100);
+    return _calculatedPropertyValue * (_calculatedCommissionRate / 100);
   }
 
   double get autoClosingCosts {
-    final value = double.tryParse(propertyValue) ?? 0;
-    final provinceRate =
-        CanadaProvinceRates.defaults[selectedProvince]?.closingCostRate ?? 1.5;
-    return value * (provinceRate / 100);
+    return _calculatedPropertyValue *
+        (_calculatedProvinceClosingCostRate / 100);
   }
 
   double get closingCostSavings {
-    if (closingCosts.trim().isNotEmpty) {
-      return double.tryParse(closingCosts) ?? 0;
+    if (_usedManualClosingCosts) {
+      return _calculatedManualClosingCosts;
     }
     return autoClosingCosts;
   }
@@ -862,6 +866,33 @@ class _HomePageState extends State<HomePage> {
       commissionRate = double.parse(clamped.toStringAsFixed(1));
     });
     _syncCommissionRateField();
+  }
+
+  void _calculateSavings() {
+    final parsedPropertyValue = double.tryParse(propertyValue);
+    if (parsedPropertyValue == null || parsedPropertyValue <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enter a valid estimated sale price first.'),
+        ),
+      );
+      return;
+    }
+
+    final provinceRate =
+        CanadaProvinceRates.defaults[selectedProvince]?.closingCostRate ?? 1.5;
+    final manualClosingCosts = double.tryParse(closingCosts.trim());
+
+    setState(() {
+      _hasCalculated = true;
+      _calculatedPropertyValue = parsedPropertyValue;
+      _calculatedCommissionRate = commissionRate;
+      _calculatedProvince = selectedProvince;
+      _calculatedProvinceClosingCostRate = provinceRate;
+      _usedManualClosingCosts =
+          closingCosts.trim().isNotEmpty && manualClosingCosts != null;
+      _calculatedManualClosingCosts = manualClosingCosts ?? 0;
+    });
   }
 
   void _saveCalculation() async {
@@ -1643,48 +1674,73 @@ class _HomePageState extends State<HomePage> {
                       style: TextStyle(color: Colors.grey[600], fontSize: 12),
                     ),
                   ),
-                ]),
-
-                // ── Section: Summary ───────────────────────────────────
-                _sectionHeader('Summary'),
-                _sectionCard([
-                  // Total — big green bold number matching SwiftUI
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 16,
-                      horizontal: 12,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '\$${totalSavings.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 40,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2E7D32),
-                        ),
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _calculateSavings,
+                        icon: const Icon(Icons.calculate),
+                        label: const Text('Calculate Savings'),
                       ),
                     ),
                   ),
-                  const Divider(height: 1),
-                  // Commission row
-                  _savingsRow(
-                    'Commission savings',
-                    '\$${commissionSavings.toStringAsFixed(2)}',
-                  ),
-                  const Divider(height: 1),
-                  // Estimated closing costs row
-                  _savingsRow(
-                    'Estimated closing cost (${(CanadaProvinceRates.defaults[selectedProvince]?.closingCostRate ?? 1.5).toStringAsFixed(1)}%)',
-                    '\$${autoClosingCosts.toStringAsFixed(2)}',
-                  ),
-                  if (closingCosts.trim().isNotEmpty) ...[
-                    const Divider(height: 1),
-                    _savingsRow(
-                      'Closing costs (manual override)',
-                      '\$${closingCostSavings.toStringAsFixed(2)}',
-                    ),
-                  ],
                 ]),
+
+                if (_hasCalculated) ...[
+                  // ── Section: Summary ─────────────────────────────────
+                  _sectionHeader('Summary'),
+                  _sectionCard([
+                    // Total — big green bold number matching SwiftUI
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 12,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '\$${totalSavings.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 40,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2E7D32),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    // Commission row
+                    _savingsRow(
+                      'Commission savings',
+                      '\$${commissionSavings.toStringAsFixed(2)}',
+                    ),
+                    const Divider(height: 1),
+                    // Estimated closing costs row
+                    _savingsRow(
+                      'Estimated closing cost (${(CanadaProvinceRates.defaults[_calculatedProvince]?.closingCostRate ?? 1.5).toStringAsFixed(1)}%)',
+                      '\$${autoClosingCosts.toStringAsFixed(2)}',
+                    ),
+                    if (_usedManualClosingCosts) ...[
+                      const Divider(height: 1),
+                      _savingsRow(
+                        'Closing costs (manual override)',
+                        '\$${closingCostSavings.toStringAsFixed(2)}',
+                      ),
+                    ],
+                  ]),
+                ] else
+                  _sectionCard([
+                    const Padding(
+                      padding: EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 12,
+                      ),
+                      child: Text(
+                        'Enter values above, then tap Calculate Savings to see your summary.',
+                        style: TextStyle(fontSize: 14, color: Colors.black87),
+                      ),
+                    ),
+                  ]),
 
                 // ── Province note ──────────────────────────────────────
                 Padding(
