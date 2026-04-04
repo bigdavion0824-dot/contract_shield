@@ -810,6 +810,17 @@ class _HomePageState extends State<HomePage> {
 
   double get totalSavings => commissionSavings + closingCostSavings;
 
+  double? _parseLooseNumber(String raw) {
+    final cleaned = raw
+        .replaceAll(',', '')
+        .replaceAll('\$', '')
+        .replaceAll('%', '')
+        .replaceAll(' ', '')
+        .trim();
+    if (cleaned.isEmpty) return null;
+    return double.tryParse(cleaned);
+  }
+
   String _formatCommissionRate(double value) {
     if (value == value.roundToDouble()) {
       return value.toStringAsFixed(0);
@@ -869,11 +880,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _calculateSavings() {
-    final parsedPropertyValue = double.tryParse(propertyValue);
+    final parsedPropertyValue = _parseLooseNumber(propertyValue);
     if (parsedPropertyValue == null || parsedPropertyValue <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Enter a valid estimated sale price first.'),
+          content: Text(
+            'Enter a valid estimated sale price (numbers only, commas are okay).',
+          ),
         ),
       );
       return;
@@ -881,7 +894,7 @@ class _HomePageState extends State<HomePage> {
 
     final provinceRate =
         CanadaProvinceRates.defaults[selectedProvince]?.closingCostRate ?? 1.5;
-    final manualClosingCosts = double.tryParse(closingCosts.trim());
+    final manualClosingCosts = _parseLooseNumber(closingCosts);
 
     setState(() {
       _hasCalculated = true;
