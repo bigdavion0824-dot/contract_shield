@@ -715,6 +715,9 @@ class _HomePageState extends State<HomePage> {
   double _calculatedProvinceClosingCostRate = 1.5;
   bool _usedManualClosingCosts = false;
   double _calculatedManualClosingCosts = 0;
+  double _sellerLegalNotaryShare = 0.28;
+  double _sellerMortgageDischargeShare = 0.17;
+  double _sellerMovingSetupShare = 0.30;
   bool closingCostsManuallyEdited = false;
   List<String> savedCalculations = [];
   bool isPremium = false;
@@ -813,30 +816,56 @@ class _HomePageState extends State<HomePage> {
   double get _estimatedSellerCostsTotal =>
       commissionSavings + closingCostSavings;
 
+  double get _sellerShareTotal =>
+      _sellerLegalNotaryShare +
+      _sellerMortgageDischargeShare +
+      _sellerMovingSetupShare;
+
+  double get _sellerShareNormalization =>
+      _sellerShareTotal > 1 ? (1 / _sellerShareTotal) : 1;
+
+  double get _sellerRemainderShare =>
+      _sellerShareTotal < 1 ? (1 - _sellerShareTotal) : 0;
+
+  double get _sellerUnallocatedShare =>
+      _sellerShareTotal > 1 ? (_sellerShareTotal - 1) : 0;
+
   double get _sellerLegalNotaryEstimate {
-    final ratio = _calculatedProvince == 'QC' ? 0.35 : 0.28;
-    return closingCostSavings * ratio;
+    return closingCostSavings *
+        _sellerLegalNotaryShare *
+        _sellerShareNormalization;
   }
 
   double get _sellerMortgageDischargeEstimate {
-    final ratio = _calculatedProvince == 'QC' ? 0.20 : 0.17;
-    return closingCostSavings * ratio;
+    return closingCostSavings *
+        _sellerMortgageDischargeShare *
+        _sellerShareNormalization;
   }
 
   double get _sellerMovingSetupEstimate {
-    final ratio = _calculatedProvince == 'QC' ? 0.25 : 0.30;
-    return closingCostSavings * ratio;
+    return closingCostSavings *
+        _sellerMovingSetupShare *
+        _sellerShareNormalization;
   }
 
   double get _sellerTaxAdjustmentsEstimate {
-    return closingCostSavings -
-        _sellerLegalNotaryEstimate -
-        _sellerMortgageDischargeEstimate -
-        _sellerMovingSetupEstimate;
+    return closingCostSavings * _sellerRemainderShare;
   }
 
   double get _estimatedSellerNetBeforeMortgage {
     return _calculatedPropertyValue - _estimatedSellerCostsTotal;
+  }
+
+  void _applySellerShareDefaults(String provinceCode) {
+    if (provinceCode == 'QC') {
+      _sellerLegalNotaryShare = 0.35;
+      _sellerMortgageDischargeShare = 0.20;
+      _sellerMovingSetupShare = 0.25;
+      return;
+    }
+    _sellerLegalNotaryShare = 0.28;
+    _sellerMortgageDischargeShare = 0.17;
+    _sellerMovingSetupShare = 0.30;
   }
 
   double? _parseLooseNumber(String raw) {
@@ -937,6 +966,10 @@ class _HomePageState extends State<HomePage> {
     final provinceRate =
         CanadaProvinceRates.defaults[selectedProvince]?.closingCostRate ?? 1.5;
     final manualClosingCosts = _parseLooseNumber(closingCosts);
+
+    if (!_hasCalculated || _calculatedProvince != selectedProvince) {
+      _applySellerShareDefaults(selectedProvince);
+    }
 
     setState(() {
       _hasCalculated = true;
@@ -1353,6 +1386,33 @@ class _HomePageState extends State<HomePage> {
               fontWeight: FontWeight.w600,
               color: Color(0xFF2E7D32),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sellerShareSlider({
+    required String label,
+    required double value,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$label (${(value * 100).toStringAsFixed(1)}%)',
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          Slider(
+            value: value,
+            min: 0,
+            max: 1,
+            divisions: 100,
+            label: '${(value * 100).toStringAsFixed(1)}%',
+            onChanged: onChanged,
           ),
         ],
       ),
@@ -1818,20 +1878,59 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ),
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 0, 16, 6),
+                      child: Text(
+                        'Adjust breakdown percentages',
+                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                      ),
+                    ),
+                    _sellerShareSlider(
+                      label: 'Legal / notary',
+                      value: _sellerLegalNotaryShare,
+                      onChanged: (value) {
+                        setState(() => _sellerLegalNotaryShare = value);
+                      },
+                    ),
+                    _sellerShareSlider(
+                      label: 'Mortgage discharge / admin',
+                      value: _sellerMortgageDischargeShare,
+                      onChanged: (value) {
+                        setState(() => _sellerMortgageDischargeShare = value);
+                      },
+                    ),
+                    _sellerShareSlider(
+                      label: 'Moving / setup buffer',
+                      value: _sellerMovingSetupShare,
+                      onChanged: (value) {
+                        setState(() => _sellerMovingSetupShare = value);
+                      },
+                    ),
+                    if (_sellerUnallocatedShare > 0)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        child: Text(
+                          'Current slider total is ${(100 + (_sellerUnallocatedShare * 100)).toStringAsFixed(1)}%. Values are automatically normalized to 100%.',
+                          style: const TextStyle(
+                            color: Color(0xFFC62828),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
                     _savingsRow(
-                      'Legal / notary',
+                      'Legal / notary (${(_sellerLegalNotaryShare * 100).toStringAsFixed(1)}%)',
                       '\$${_sellerLegalNotaryEstimate.toStringAsFixed(2)}',
                     ),
                     _savingsRow(
-                      'Mortgage discharge / admin',
+                      'Mortgage discharge / admin (${(_sellerMortgageDischargeShare * 100).toStringAsFixed(1)}%)',
                       '\$${_sellerMortgageDischargeEstimate.toStringAsFixed(2)}',
                     ),
                     _savingsRow(
-                      'Moving / setup buffer',
+                      'Moving / setup buffer (${(_sellerMovingSetupShare * 100).toStringAsFixed(1)}%)',
                       '\$${_sellerMovingSetupEstimate.toStringAsFixed(2)}',
                     ),
                     _savingsRow(
-                      'Tax and adjustment buffer',
+                      'Other closing items (${(_sellerRemainderShare * 100).toStringAsFixed(1)}%)',
                       '\$${_sellerTaxAdjustmentsEstimate.toStringAsFixed(2)}',
                     ),
                     const Divider(height: 20),
