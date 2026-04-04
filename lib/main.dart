@@ -810,6 +810,35 @@ class _HomePageState extends State<HomePage> {
 
   double get totalSavings => commissionSavings + closingCostSavings;
 
+  double get _estimatedSellerCostsTotal =>
+      commissionSavings + closingCostSavings;
+
+  double get _sellerLegalNotaryEstimate {
+    final ratio = _calculatedProvince == 'QC' ? 0.35 : 0.28;
+    return closingCostSavings * ratio;
+  }
+
+  double get _sellerMortgageDischargeEstimate {
+    final ratio = _calculatedProvince == 'QC' ? 0.20 : 0.17;
+    return closingCostSavings * ratio;
+  }
+
+  double get _sellerMovingSetupEstimate {
+    final ratio = _calculatedProvince == 'QC' ? 0.25 : 0.30;
+    return closingCostSavings * ratio;
+  }
+
+  double get _sellerTaxAdjustmentsEstimate {
+    return closingCostSavings -
+        _sellerLegalNotaryEstimate -
+        _sellerMortgageDischargeEstimate -
+        _sellerMovingSetupEstimate;
+  }
+
+  double get _estimatedSellerNetBeforeMortgage {
+    return _calculatedPropertyValue - _estimatedSellerCostsTotal;
+  }
+
   double? _parseLooseNumber(String raw) {
     final cleaned = raw
         .replaceAll(',', '')
@@ -1759,7 +1788,7 @@ class _HomePageState extends State<HomePage> {
                     const Divider(height: 1),
                     // Commission row
                     _savingsRow(
-                      'Commission savings',
+                      'Estimated real estate agent commission',
                       '\$${commissionSavings.toStringAsFixed(2)}',
                     ),
                     const Divider(height: 1),
@@ -1775,6 +1804,65 @@ class _HomePageState extends State<HomePage> {
                         '\$${closingCostSavings.toStringAsFixed(2)}',
                       ),
                     ],
+                    const Divider(height: 20),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Text(
+                        'Estimated Seller Cost Breakdown',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    _savingsRow(
+                      'Legal / notary',
+                      '\$${_sellerLegalNotaryEstimate.toStringAsFixed(2)}',
+                    ),
+                    _savingsRow(
+                      'Mortgage discharge / admin',
+                      '\$${_sellerMortgageDischargeEstimate.toStringAsFixed(2)}',
+                    ),
+                    _savingsRow(
+                      'Moving / setup buffer',
+                      '\$${_sellerMovingSetupEstimate.toStringAsFixed(2)}',
+                    ),
+                    _savingsRow(
+                      'Tax and adjustment buffer',
+                      '\$${_sellerTaxAdjustmentsEstimate.toStringAsFixed(2)}',
+                    ),
+                    const Divider(height: 20),
+                    _savingsRow(
+                      'Estimated total seller costs',
+                      '\$${_estimatedSellerCostsTotal.toStringAsFixed(2)}',
+                    ),
+                    _savingsRow(
+                      'Estimated net before mortgage payoff',
+                      '\$${_estimatedSellerNetBeforeMortgage.toStringAsFixed(2)}',
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+                      child: Text(
+                        'For buying-cost line items (land transfer tax, legal/notary, inspection, appraisal, insurance, and cash needed), open Down Payment & Buyer Costs.',
+                        style: TextStyle(color: Colors.grey[700], fontSize: 12),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _navigateToBuyerCosts,
+                          icon: const Icon(
+                            Icons.account_balance_wallet_outlined,
+                          ),
+                          label: const Text('Open Buyer Cost Breakdown'),
+                        ),
+                      ),
+                    ),
                   ]),
                 ] else
                   _sectionCard([
