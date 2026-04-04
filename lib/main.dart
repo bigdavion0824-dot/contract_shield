@@ -1645,8 +1645,8 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ]),
 
-                // ── Section: Your Potential Savings ────────────────────
-                _sectionHeader('Your Potential Savings'),
+                // ── Section: Summary ───────────────────────────────────
+                _sectionHeader('Summary'),
                 _sectionCard([
                   // Total — big green bold number matching SwiftUI
                   Padding(
