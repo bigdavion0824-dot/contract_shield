@@ -711,8 +711,11 @@ class _HomePageState extends State<HomePage> {
   final TextEditingController _commissionAmountController =
       TextEditingController();
   final TextEditingController _closingCostsController = TextEditingController();
+  final TextEditingController _remainingMortgageController =
+      TextEditingController();
   String commissionAmount = '';
   String closingCosts = '';
+  String remainingMortgageBalance = '';
   String selectedProvince = 'ON';
   bool _hasCalculated = false;
   double _calculatedPropertyValue = 0;
@@ -873,6 +876,15 @@ class _HomePageState extends State<HomePage> {
 
   double get _estimatedSellerNetBeforeMortgage {
     return _calculatedPropertyValue - _estimatedSellerCostsTotal;
+  }
+
+  double get _remainingMortgagePayoff {
+    return _parseLooseNumber(remainingMortgageBalance) ?? 0;
+  }
+
+  double get _estimatedSellerNetAfterMortgage {
+    final net = _estimatedSellerNetBeforeMortgage - _remainingMortgagePayoff;
+    return net < 0 ? 0 : net;
   }
 
   void _applySellerShareDefaults(String provinceCode) {
@@ -1593,6 +1605,7 @@ class _HomePageState extends State<HomePage> {
       propertyValue = '';
       closingCosts = '';
       commissionAmount = '';
+      remainingMortgageBalance = '';
       _closingCostsAutoFilled = false;
       closingCostsManuallyEdited = false;
       _hasCalculated = false;
@@ -1604,6 +1617,7 @@ class _HomePageState extends State<HomePage> {
     _propertyValueController.clear();
     _closingCostsController.clear();
     _commissionAmountController.clear();
+    _remainingMortgageController.clear();
     _syncCommissionRateField();
   }
 
@@ -1613,6 +1627,7 @@ class _HomePageState extends State<HomePage> {
     _commissionRateController.dispose();
     _commissionAmountController.dispose();
     _closingCostsController.dispose();
+    _remainingMortgageController.dispose();
     _purchaseSubscription?.cancel();
     bannerAd?.dispose();
     AdMobHelper.dispose();
@@ -2072,6 +2087,30 @@ class _HomePageState extends State<HomePage> {
                     _savingsRow(
                       'Estimated net before mortgage payoff',
                       '\$${_estimatedSellerNetBeforeMortgage.toStringAsFixed(2)}',
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                      child: TextFormField(
+                        controller: _remainingMortgageController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Remaining mortgage balance',
+                          hintText: 'e.g., 245000',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            remainingMortgageBalance = value;
+                          });
+                        },
+                      ),
+                    ),
+                    _savingsRow(
+                      'Estimated net after mortgage payoff',
+                      '\$${_estimatedSellerNetAfterMortgage.toStringAsFixed(2)}',
                     ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
