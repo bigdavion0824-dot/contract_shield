@@ -821,6 +821,19 @@ class _HomePageState extends State<HomePage> {
     return double.tryParse(cleaned);
   }
 
+  double get _liveProvinceClosingCostRate {
+    return CanadaProvinceRates.defaults[selectedProvince]?.closingCostRate ??
+        1.5;
+  }
+
+  double? get _liveAutoClosingCost {
+    final salePrice = _parseLooseNumber(propertyValue);
+    if (salePrice == null || salePrice <= 0) {
+      return null;
+    }
+    return salePrice * (_liveProvinceClosingCostRate / 100);
+  }
+
   String _formatCommissionRate(double value) {
     if (value == value.roundToDouble()) {
       return value.toStringAsFixed(0);
@@ -1625,6 +1638,17 @@ class _HomePageState extends State<HomePage> {
                       closingCosts = value;
                       closingCostsManuallyEdited = value.trim().isNotEmpty;
                     }),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    child: Text(
+                      closingCosts.trim().isNotEmpty
+                          ? 'Using manual closing costs value.'
+                          : (_liveAutoClosingCost == null
+                                ? 'Auto-estimated closing cost will appear after entering sale price.'
+                                : 'Auto-estimated closing cost: \$${_liveAutoClosingCost!.toStringAsFixed(2)} (${_liveProvinceClosingCostRate.toStringAsFixed(1)}%)'),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    ),
                   ),
                   const Divider(height: 1),
                   // Stepper row — matches SwiftUI Stepper
