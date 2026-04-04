@@ -702,6 +702,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final TextEditingController _propertyValueController =
+      TextEditingController();
   String propertyValue = '';
   double commissionRate = 5.0;
   final TextEditingController _commissionRateController =
@@ -1588,15 +1590,26 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       selectedProvince = provinceCode;
       commissionRate = defaults.commissionRate;
-      if (!closingCostsManuallyEdited) {
-        closingCosts = '';
-      }
+      propertyValue = '';
+      closingCosts = '';
+      commissionAmount = '';
+      _closingCostsAutoFilled = false;
+      closingCostsManuallyEdited = false;
+      _hasCalculated = false;
+      _usedManualCommission = false;
+      _calculatedManualCommission = 0;
+      _usedManualClosingCosts = false;
+      _calculatedManualClosingCosts = 0;
     });
+    _propertyValueController.clear();
+    _closingCostsController.clear();
+    _commissionAmountController.clear();
     _syncCommissionRateField();
   }
 
   @override
   void dispose() {
+    _propertyValueController.dispose();
     _commissionRateController.dispose();
     _commissionAmountController.dispose();
     _closingCostsController.dispose();
@@ -1746,6 +1759,7 @@ class _HomePageState extends State<HomePage> {
                   const Divider(height: 1),
                   // Sale price
                   TextFormField(
+                    controller: _propertyValueController,
                     decoration: InputDecoration(
                       labelText: _getString('estimatedSalePrice'),
                       prefixIcon: const Icon(Icons.home),
