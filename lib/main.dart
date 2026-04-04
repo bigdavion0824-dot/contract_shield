@@ -706,13 +706,17 @@ class _HomePageState extends State<HomePage> {
   double commissionRate = 5.0;
   final TextEditingController _commissionRateController =
       TextEditingController();
-  final TextEditingController _closingCostsController =
+  final TextEditingController _commissionAmountController =
       TextEditingController();
+  final TextEditingController _closingCostsController = TextEditingController();
+  String commissionAmount = '';
   String closingCosts = '';
   String selectedProvince = 'ON';
   bool _hasCalculated = false;
   double _calculatedPropertyValue = 0;
   double _calculatedCommissionRate = 5.0;
+  bool _usedManualCommission = false;
+  double _calculatedManualCommission = 0;
   String _calculatedProvince = 'ON';
   double _calculatedProvinceClosingCostRate = 1.5;
   bool _usedManualClosingCosts = false;
@@ -799,6 +803,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   double get commissionSavings {
+    if (_usedManualCommission) {
+      return _calculatedManualCommission;
+    }
     return _calculatedPropertyValue * (_calculatedCommissionRate / 100);
   }
 
@@ -895,6 +902,14 @@ class _HomePageState extends State<HomePage> {
     return salePrice * (_liveProvinceClosingCostRate / 100);
   }
 
+  double? get _liveCommissionEstimate {
+    final salePrice = _parseLooseNumber(propertyValue);
+    if (salePrice == null || salePrice <= 0) {
+      return null;
+    }
+    return salePrice * (commissionRate / 100);
+  }
+
   String _formatCommissionRate(double value) {
     if (value == value.roundToDouble()) {
       return value.toStringAsFixed(0);
@@ -968,6 +983,7 @@ class _HomePageState extends State<HomePage> {
 
     final provinceRate =
         CanadaProvinceRates.defaults[selectedProvince]?.closingCostRate ?? 1.5;
+    final manualCommission = _parseLooseNumber(commissionAmount);
     if (closingCosts.trim().isEmpty && _liveAutoClosingCost != null) {
       final autoEstimate = _liveAutoClosingCost!.toStringAsFixed(2);
       _closingCostsController.value = TextEditingValue(
@@ -989,6 +1005,9 @@ class _HomePageState extends State<HomePage> {
       _hasCalculated = true;
       _calculatedPropertyValue = parsedPropertyValue;
       _calculatedCommissionRate = commissionRate;
+      _usedManualCommission =
+          commissionAmount.trim().isNotEmpty && manualCommission != null;
+      _calculatedManualCommission = manualCommission ?? 0;
       _calculatedProvince = selectedProvince;
       _calculatedProvinceClosingCostRate = provinceRate;
       _usedManualClosingCosts =
@@ -1572,6 +1591,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _commissionRateController.dispose();
+    _commissionAmountController.dispose();
     _closingCostsController.dispose();
     _purchaseSubscription?.cancel();
     bannerAd?.dispose();
@@ -1729,7 +1749,8 @@ class _HomePageState extends State<HomePage> {
                     keyboardType: TextInputType.number,
                     onChanged: (value) => setState(() {
                       propertyValue = value;
-                      if (_closingCostsAutoFilled && _liveAutoClosingCost != null) {
+                      if (_closingCostsAutoFilled &&
+                          _liveAutoClosingCost != null) {
                         final autoEstimate = _liveAutoClosingCost!
                             .toStringAsFixed(2);
                         _closingCostsController.value = TextEditingValue(
@@ -1835,6 +1856,35 @@ class _HomePageState extends State<HomePage> {
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    child: TextFormField(
+                      controller: _commissionAmountController,
+                      decoration: const InputDecoration(
+                        labelText: 'Real Estate Commission (optional \$)',
+                        hintText: 'e.g., 25000',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      onChanged: (value) => setState(() {
+                        commissionAmount = value;
+                      }),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    child: Text(
+                      commissionAmount.trim().isNotEmpty
+                          ? 'Using manual real estate commission amount.'
+                          : (_liveCommissionEstimate == null
+                                ? 'Commission estimate will appear after entering sale price.'
+                                : 'Commission estimate: \$${_liveCommissionEstimate!.toStringAsFixed(2)} (${_formatCommissionRate(commissionRate)}%)'),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                     child: Text(
                       _format(_getString('defaultRatesApplied'), [
                         CanadaProvinceRates.labels[selectedProvince] ??
@@ -1880,7 +1930,9 @@ class _HomePageState extends State<HomePage> {
                     const Divider(height: 1),
                     // Commission row
                     _savingsRow(
-                      'Estimated real estate agent commission',
+                      _usedManualCommission
+                          ? 'Real estate commission (manual)'
+                          : 'Estimated real estate agent commission',
                       '\$${commissionSavings.toStringAsFixed(2)}',
                     ),
                     const Divider(height: 1),
