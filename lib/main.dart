@@ -1672,13 +1672,18 @@ class _HomePageState extends State<HomePage> {
                     '\$${commissionSavings.toStringAsFixed(2)}',
                   ),
                   const Divider(height: 1),
-                  // Closing costs row
+                  // Estimated closing costs row
                   _savingsRow(
-                    closingCosts.trim().isNotEmpty
-                        ? 'Closing cost savings'
-                        : 'Est. closing costs (${(CanadaProvinceRates.defaults[selectedProvince]?.closingCostRate ?? 1.5).toStringAsFixed(1)}%)',
-                    '\$${closingCostSavings.toStringAsFixed(2)}',
+                    'Estimated closing cost (${(CanadaProvinceRates.defaults[selectedProvince]?.closingCostRate ?? 1.5).toStringAsFixed(1)}%)',
+                    '\$${autoClosingCosts.toStringAsFixed(2)}',
                   ),
+                  if (closingCosts.trim().isNotEmpty) ...[
+                    const Divider(height: 1),
+                    _savingsRow(
+                      'Closing costs (manual override)',
+                      '\$${closingCostSavings.toStringAsFixed(2)}',
+                    ),
+                  ],
                 ]),
 
                 // ── Province note ──────────────────────────────────────
