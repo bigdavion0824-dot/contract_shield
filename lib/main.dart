@@ -706,6 +706,14 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
+enum _HomeQuickMenuAction {
+  buyerQaMatrix,
+  copyLaunchChecklist,
+  settings,
+  launchReadiness,
+  storeSubmissionText,
+}
+
 class _HomePageState extends State<HomePage> {
   final TextEditingController _propertyValueController =
       TextEditingController();
@@ -737,6 +745,7 @@ class _HomePageState extends State<HomePage> {
   double _listingAgentShare = 0.50;
   bool _commissionAutoFilled = false;
   bool _closingCostsAutoFilled = false;
+  bool _showAdvancedInputs = false;
   bool closingCostsManuallyEdited = false;
   List<String> savedCalculations = [];
   bool isPremium = false;
@@ -1444,6 +1453,79 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _quickStartStep({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E88E5).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: const Color(0xFF1565C0), size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _flowChip({
+    required IconData icon,
+    required String text,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _savingsRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1699,12 +1781,27 @@ class _HomePageState extends State<HomePage> {
       _calculatedManualCommission = 0;
       _usedManualClosingCosts = false;
       _calculatedManualClosingCosts = 0;
+      _showAdvancedInputs = false;
     });
     _propertyValueController.clear();
     _closingCostsController.clear();
     _commissionAmountController.clear();
     _remainingMortgageController.clear();
     _syncCommissionRateField();
+  }
+
+  void _resetCurrentInputs() {
+    _setProvinceDefaults(selectedProvince);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _isFr
+              ? 'Champs réinitialisés pour la province actuelle.'
+              : 'Inputs reset for the current province.',
+        ),
+        duration: const Duration(milliseconds: 900),
+      ),
+    );
   }
 
   @override
@@ -1761,6 +1858,67 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
+            PopupMenuButton<_HomeQuickMenuAction>(
+              key: const Key('home_quick_menu'),
+              icon: const Icon(Icons.more_vert),
+              onSelected: (action) {
+                switch (action) {
+                  case _HomeQuickMenuAction.buyerQaMatrix:
+                    _navigateToBuyerQaMatrix();
+                    break;
+                  case _HomeQuickMenuAction.copyLaunchChecklist:
+                    unawaited(_copyLaunchChecklist());
+                    break;
+                  case _HomeQuickMenuAction.settings:
+                    unawaited(_navigateToSettings());
+                    break;
+                  case _HomeQuickMenuAction.launchReadiness:
+                    _navigateToLaunchReadiness();
+                    break;
+                  case _HomeQuickMenuAction.storeSubmissionText:
+                    _navigateToStoreSubmissionText();
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem<_HomeQuickMenuAction>(
+                  value: _HomeQuickMenuAction.buyerQaMatrix,
+                  child: Text(
+                    _isFr
+                        ? 'Matrice QA acheteur (ON/QC/BC)'
+                        : 'Buyer QA Matrix (ON/QC/BC)',
+                  ),
+                ),
+                PopupMenuItem<_HomeQuickMenuAction>(
+                  value: _HomeQuickMenuAction.copyLaunchChecklist,
+                  child: Text(
+                    _isFr
+                        ? 'Copier checklist lancement'
+                        : 'Copy Launch Checklist',
+                  ),
+                ),
+                PopupMenuItem<_HomeQuickMenuAction>(
+                  value: _HomeQuickMenuAction.settings,
+                  child: Text(_isFr ? 'Parametres' : 'Settings'),
+                ),
+                PopupMenuItem<_HomeQuickMenuAction>(
+                  value: _HomeQuickMenuAction.launchReadiness,
+                  child: Text(
+                    _isFr
+                        ? 'Etat de preparation lancement'
+                        : 'Launch Readiness',
+                  ),
+                ),
+                PopupMenuItem<_HomeQuickMenuAction>(
+                  value: _HomeQuickMenuAction.storeSubmissionText,
+                  child: Text(
+                    _isFr
+                        ? 'Texte de soumission magasin'
+                        : 'Store Submission Text',
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
         body: Container(
@@ -1796,7 +1954,7 @@ class _HomePageState extends State<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Welcome to Contract Shield',
+                        'Sell Smarter with Contract Shield',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -1804,33 +1962,135 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'Estimate your selling and buying costs with confidence',
-                        style: TextStyle(fontSize: 14, color: Colors.white70),
+                      Text(
+                        _isFr
+                            ? 'Estimez rapidement vos coûts et votre net vendeur en quelques étapes simples.'
+                            : 'Estimate costs and seller net quickly with a few simple inputs.',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.white70,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              'Province: $_selectedProvinceName',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              isPremium ? 'Premium active' : 'Free plan',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 24),
 
-                // Banner Ad
-                if (bannerAd != null)
-                  SizedBox(height: 50, child: AdWidget(ad: bannerAd!))
-                else
-                  Container(
-                    height: 50,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(12),
+                _sectionHeader('Quick Start'),
+                _sectionCard([
+                  Theme(
+                    data: Theme.of(
+                      context,
+                    ).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+                      childrenPadding: const EdgeInsets.only(bottom: 8),
+                      title: const Text(
+                        'How it works (3 quick steps)',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      subtitle: Text(
+                        _isFr
+                            ? 'Touchez pour afficher les étapes.'
+                            : 'Tap to show steps.',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                      children: [
+                        _quickStartStep(
+                          icon: Icons.map_outlined,
+                          title: '1) Choose your province',
+                          subtitle:
+                              'Default local rates are applied automatically for faster setup.',
+                        ),
+                        const Divider(height: 1),
+                        _quickStartStep(
+                          icon: Icons.home_work_outlined,
+                          title: '2) Enter sale price',
+                          subtitle:
+                              'Leave optional fields blank to let the app auto-estimate values.',
+                        ),
+                        const Divider(height: 1),
+                        _quickStartStep(
+                          icon: Icons.calculate_outlined,
+                          title: '3) Tap Calculate Savings',
+                          subtitle:
+                              'See a clear summary first, then unlock deeper breakdowns as needed.',
+                        ),
+                      ],
                     ),
-                    child: const Center(child: Text('Advertisement Space')),
                   ),
-                const SizedBox(height: 24),
+                ]),
+                const SizedBox(height: 16),
 
                 // ── Section: Property Details ──────────────────────────
                 _sectionHeader('Property Details'),
                 _sectionCard([
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _flowChip(
+                          icon: Icons.priority_high,
+                          text: 'Required: Sale Price',
+                          color: const Color(0xFFD84315),
+                        ),
+                        _flowChip(
+                          icon: Icons.auto_awesome,
+                          text: 'Optional fields auto-estimate',
+                          color: const Color(0xFF1565C0),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
                   // Province picker
                   DropdownButtonFormField<String>(
                     initialValue: selectedProvince,
@@ -1898,127 +2158,162 @@ class _HomePageState extends State<HomePage> {
                     }),
                   ),
                   const Divider(height: 1),
-                  // Closing costs
-                  TextFormField(
-                    controller: _closingCostsController,
-                    decoration: InputDecoration(
-                      labelText: _getString('closingCosts'),
-                      prefixIcon: const Icon(Icons.attach_money),
-                      hintText: 'Leave blank to auto-estimate',
-                      border: InputBorder.none,
-                      filled: false,
-                    ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (value) => setState(() {
-                      closingCosts = value;
-                      _closingCostsAutoFilled = false;
-                      closingCostsManuallyEdited = value.trim().isNotEmpty;
-                    }),
-                  ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                    child: Text(
-                      closingCosts.trim().isNotEmpty
-                          ? 'Using manual closing costs value.'
-                          : (_liveAutoClosingCost == null
-                                ? 'Auto-estimated closing cost will appear after entering sale price.'
-                                : 'Auto-estimated closing cost: \$${_liveAutoClosingCost!.toStringAsFixed(2)} (${_liveProvinceClosingCostRate.toStringAsFixed(1)}%)'),
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                    ),
-                  ),
-                  const Divider(height: 1),
-                  // Stepper row — matches SwiftUI Stepper
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.percent,
-                          size: 20,
-                          color: Color(0xFF1E88E5),
+                    padding: const EdgeInsets.fromLTRB(8, 2, 8, 2),
+                    child: ListTile(
+                      dense: true,
+                      visualDensity: const VisualDensity(
+                        vertical: -2,
+                        horizontal: -2,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 6),
+                      title: Text(
+                        _showAdvancedInputs
+                            ? 'Hide optional inputs'
+                            : 'Show optional inputs',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Agent Commission: ${_formatCommissionRate(commissionRate)}%',
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.remove_circle_outline),
-                          color: const Color(0xFF1E88E5),
-                          onPressed: commissionRate > 1.0
-                              ? () => _adjustCommissionRate(-0.5)
-                              : null,
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.add_circle_outline),
-                          color: const Color(0xFF1E88E5),
-                          onPressed: commissionRate < 7.0
-                              ? () => _adjustCommissionRate(0.5)
-                              : null,
-                        ),
-                      ],
+                      ),
+                      subtitle: Text(
+                        'Closing costs and commission overrides',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                      ),
+                      trailing: Icon(
+                        _showAdvancedInputs
+                            ? Icons.expand_less_rounded
+                            : Icons.expand_more_rounded,
+                      ),
+                      onTap: () {
+                        setState(() {
+                          _showAdvancedInputs = !_showAdvancedInputs;
+                        });
+                      },
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                    child: TextFormField(
-                      controller: _commissionRateController,
-                      decoration: const InputDecoration(
-                        labelText: 'Enter commission %',
-                        hintText: 'e.g., 2.5',
-                        border: OutlineInputBorder(),
-                        isDense: true,
+                  if (_showAdvancedInputs) ...[
+                    const Divider(height: 1),
+                    TextFormField(
+                      controller: _closingCostsController,
+                      decoration: InputDecoration(
+                        labelText: _getString('closingCosts'),
+                        prefixIcon: const Icon(Icons.attach_money),
+                        hintText: 'Leave blank to auto-estimate',
+                        border: InputBorder.none,
+                        filled: false,
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      textInputAction: TextInputAction.done,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*\.?\d{0,1}$'),
-                        ),
-                      ],
-                      onChanged: _onCommissionRateChanged,
-                      onEditingComplete: _commitCommissionRateInput,
-                      onFieldSubmitted: (_) => _commitCommissionRateInput(),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                    child: TextFormField(
-                      controller: _commissionAmountController,
-                      decoration: const InputDecoration(
-                        labelText: 'Real Estate Commission (optional \$)',
-                        hintText: 'e.g., 25000',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
+                      keyboardType: TextInputType.number,
                       onChanged: (value) => setState(() {
-                        commissionAmount = value;
-                        _commissionAutoFilled = false;
+                        closingCosts = value;
+                        _closingCostsAutoFilled = false;
+                        closingCostsManuallyEdited = value.trim().isNotEmpty;
                       }),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                    child: Text(
-                      commissionAmount.trim().isNotEmpty &&
-                              !_commissionAutoFilled
-                          ? 'Using manual real estate commission amount.'
-                          : (_liveCommissionEstimate == null
-                                ? 'Commission estimate will appear after entering sale price.'
-                                : 'Commission estimate: \$${_liveCommissionEstimate!.toStringAsFixed(2)} (${_formatCommissionRate(commissionRate)}%)'),
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: Text(
+                        closingCosts.trim().isNotEmpty
+                            ? 'Using manual closing costs value.'
+                            : (_liveAutoClosingCost == null
+                                  ? 'Auto-estimated closing cost will appear after entering sale price.'
+                                  : 'Auto-estimated closing cost: \$${_liveAutoClosingCost!.toStringAsFixed(2)} (${_liveProvinceClosingCostRate.toStringAsFixed(1)}%)'),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      ),
                     ),
-                  ),
+                    const Divider(height: 1),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.percent,
+                            size: 20,
+                            color: Color(0xFF1E88E5),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Agent Commission: ${_formatCommissionRate(commissionRate)}%',
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle_outline),
+                            color: const Color(0xFF1E88E5),
+                            onPressed: commissionRate > 1.0
+                                ? () => _adjustCommissionRate(-0.5)
+                                : null,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle_outline),
+                            color: const Color(0xFF1E88E5),
+                            onPressed: commissionRate < 7.0
+                                ? () => _adjustCommissionRate(0.5)
+                                : null,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: TextFormField(
+                        controller: _commissionRateController,
+                        decoration: const InputDecoration(
+                          labelText: 'Enter commission %',
+                          hintText: 'e.g., 2.5',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        textInputAction: TextInputAction.done,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d{0,1}$'),
+                          ),
+                        ],
+                        onChanged: _onCommissionRateChanged,
+                        onEditingComplete: _commitCommissionRateInput,
+                        onFieldSubmitted: (_) => _commitCommissionRateInput(),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: TextFormField(
+                        controller: _commissionAmountController,
+                        decoration: const InputDecoration(
+                          labelText: 'Real Estate Commission (optional \$)',
+                          hintText: 'e.g., 25000',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        onChanged: (value) => setState(() {
+                          commissionAmount = value;
+                          _commissionAutoFilled = false;
+                        }),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: Text(
+                        commissionAmount.trim().isNotEmpty &&
+                                !_commissionAutoFilled
+                            ? 'Using manual real estate commission amount.'
+                            : (_liveCommissionEstimate == null
+                                  ? 'Commission estimate will appear after entering sale price.'
+                                  : 'Commission estimate: \$${_liveCommissionEstimate!.toStringAsFixed(2)} (${_formatCommissionRate(commissionRate)}%)'),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      ),
+                    ),
+                  ],
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                     child: Text(
@@ -2031,12 +2326,63 @@ class _HomePageState extends State<HomePage> {
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _calculateSavings,
-                        icon: const Icon(Icons.calculate),
-                        label: const Text('Calculate Savings'),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E88E5).withValues(alpha: 0.07),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(
+                            0xFF1E88E5,
+                          ).withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _isFr ? 'Prêt à calculer ?' : 'Ready to calculate?',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _isFr
+                                ? 'Appuyez sur Calculer pour générer votre résumé instantanément.'
+                                : 'Tap Calculate to generate your summary instantly.',
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _calculateSavings,
+                              icon: const Icon(Icons.calculate),
+                              label: const Text('Calculate Savings'),
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: const Size(double.infinity, 52),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: _resetCurrentInputs,
+                              icon: const Icon(Icons.restart_alt),
+                              label: Text(
+                                _isFr
+                                    ? 'Réinitialiser les champs'
+                                    : 'Reset inputs',
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -2259,413 +2605,515 @@ class _HomePageState extends State<HomePage> {
                   ]),
                 ] else
                   _sectionCard([
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.symmetric(
                         vertical: 16,
                         horizontal: 12,
                       ),
-                      child: Text(
-                        'Enter values above, then tap Calculate Savings to see your summary.',
-                        style: TextStyle(fontSize: 14, color: Colors.black87),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _isFr
+                                ? 'Prochaine étape: complétez les champs ci-dessus puis appuyez sur Calculer.'
+                                : 'Next step: fill in the fields above, then tap Calculate Savings.',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _isFr
+                                ? 'Commencez simplement par le prix de vente estimé. Les autres champs peuvent rester vides au début.'
+                                : 'Start with only the estimated sale price. You can leave the other fields blank at first.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ]),
 
+                const SizedBox(height: 12),
+                if (bannerAd != null)
+                  SizedBox(height: 50, child: AdWidget(ad: bannerAd!))
+                else
+                  Container(
+                    height: 50,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Center(child: Text('Advertisement Space')),
+                  ),
+                const SizedBox(height: 16),
+
                 // ── Province note ──────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 4, 4, 16),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        size: 14,
-                        color: Colors.grey[600],
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          '$_selectedProvinceName: $_selectedProvinceNote',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[600],
-                            height: 1.4,
-                          ),
+                _sectionCard([
+                  Theme(
+                    data: Theme.of(
+                      context,
+                    ).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+                      title: Text(
+                        _isFr ? 'Note provinciale' : 'Province note',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-
-                Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2E7D32).withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: const Color(0xFF2E7D32).withValues(alpha: 0.25),
+                      subtitle: Text(
+                        _selectedProvinceName,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                          child: Text(
+                            '$_selectedProvinceName: $_selectedProvinceNote',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[700],
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
+                ]),
+                const SizedBox(height: 10),
+
+                _sectionCard([
+                  Theme(
+                    data: Theme.of(
+                      context,
+                    ).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+                      title: Text(
                         _regionalRightsTitle,
                         style: const TextStyle(
+                          fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF1B5E20),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _regionalRightsQcLine,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF1B5E20),
-                          height: 1.4,
-                        ),
+                      subtitle: Text(
+                        _isFr
+                            ? 'Touchez pour afficher le résumé.'
+                            : 'Tap to view summary.',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _regionalRightsOnLine,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF1B5E20),
-                          height: 1.4,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _regionalRightsQcLine,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF1B5E20),
+                                  height: 1.4,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                _regionalRightsOnLine,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF1B5E20),
+                                  height: 1.4,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                _regionalRightsBcLine,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF1B5E20),
+                                  height: 1.4,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _legalInfoOnly,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF33691E),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _regionalRightsBcLine,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF1B5E20),
-                          height: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _legalInfoOnly,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF33691E),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                ]),
+                const SizedBox(height: 10),
 
                 if (selectedProvince == 'QC')
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00838F).withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: const Color(0xFF00838F).withValues(alpha: 0.25),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
+                  _sectionCard([
+                    Theme(
+                      data: Theme.of(
+                        context,
+                      ).copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+                        title: Text(
                           _isFr
-                              ? 'Sortie Courtier Québec (droit OACIQ de 3 jours)'
-                              : 'Quebec Broker Exit (OACIQ 3-Day Right)',
+                              ? 'Sortie Courtier Québec (3 jours)'
+                              : 'Quebec Broker Exit (3-Day Right)',
                           style: const TextStyle(
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF006064),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
+                        subtitle: Text(
                           _isFr
-                              ? 'Annulez un contrat de courtage en 3 jours pour 0 \$.'
-                              : 'Cancel any brokerage contract in 3 days for \$0.',
-                          style: const TextStyle(
+                              ? 'Touchez pour afficher les détails.'
+                              : 'Tap to view details.',
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF006064),
-                            height: 1.4,
+                            color: Colors.grey[600],
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _isFr
-                              ? 'Gotcha: le delai commence le lendemain de la reception de la copie signee. Si le 3e jour tombe samedi ou dimanche, echeance repoussee au lundi.'
-                              : 'Gotcha: clock starts the day after receiving the signed duplicate. If day 3 lands on Saturday/Sunday, deadline moves to Monday.',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF006064),
-                            height: 1.35,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        OutlinedButton.icon(
-                          onPressed: () async {
-                            final picked = await showDatePicker(
-                              context: context,
-                              initialDate:
-                                  _quebecBrokerageSignedDate ?? DateTime.now(),
-                              firstDate: DateTime.now().subtract(
-                                const Duration(days: 365),
-                              ),
-                              lastDate: DateTime.now().add(
-                                const Duration(days: 365),
-                              ),
-                            );
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _isFr
+                                      ? 'Annulez un contrat de courtage en 3 jours pour 0 \$.'
+                                      : 'Cancel any brokerage contract in 3 days for \$0.',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF006064),
+                                    height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _isFr
+                                      ? 'Gotcha: le delai commence le lendemain de la reception de la copie signee. Si le 3e jour tombe samedi ou dimanche, echeance repoussee au lundi.'
+                                      : 'Gotcha: clock starts the day after receiving the signed duplicate. If day 3 lands on Saturday/Sunday, deadline moves to Monday.',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF006064),
+                                    height: 1.35,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                OutlinedButton.icon(
+                                  onPressed: () async {
+                                    final picked = await showDatePicker(
+                                      context: context,
+                                      initialDate:
+                                          _quebecBrokerageSignedDate ??
+                                          DateTime.now(),
+                                      firstDate: DateTime.now().subtract(
+                                        const Duration(days: 365),
+                                      ),
+                                      lastDate: DateTime.now().add(
+                                        const Duration(days: 365),
+                                      ),
+                                    );
 
-                            if (picked != null) {
-                              setState(
-                                () => _quebecBrokerageSignedDate = picked,
-                              );
-                              checkQuebecBrokerExit(picked);
-                            }
-                          },
-                          icon: const Icon(Icons.calendar_today),
-                          label: Text(
-                            _quebecBrokerageSignedDate == null
-                                ? (_isFr
-                                      ? 'Définir la date du contrat de courtage'
-                                      : 'Set Brokerage Contract Date')
-                                : (_isFr
-                                      ? 'Signé: ${_formatDate(_quebecBrokerageSignedDate!)}'
-                                      : 'Signed: ${_formatDate(_quebecBrokerageSignedDate!)}'),
-                          ),
-                        ),
-                        if (_quebecBrokerageSignedDate != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            _buildQuebecBrokerExitMessage(
-                              _quebecBrokerageSignedDate!,
-                            ),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF006064),
-                              height: 1.4,
+                                    if (picked != null) {
+                                      setState(
+                                        () =>
+                                            _quebecBrokerageSignedDate = picked,
+                                      );
+                                      checkQuebecBrokerExit(picked);
+                                    }
+                                  },
+                                  icon: const Icon(Icons.calendar_today),
+                                  label: Text(
+                                    _quebecBrokerageSignedDate == null
+                                        ? (_isFr
+                                              ? 'Définir la date du contrat de courtage'
+                                              : 'Set Brokerage Contract Date')
+                                        : (_isFr
+                                              ? 'Signé: ${_formatDate(_quebecBrokerageSignedDate!)}'
+                                              : 'Signed: ${_formatDate(_quebecBrokerageSignedDate!)}'),
+                                  ),
+                                ),
+                                if (_quebecBrokerageSignedDate != null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _buildQuebecBrokerExitMessage(
+                                      _quebecBrokerageSignedDate!,
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF006064),
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ],
-                      ],
+                      ),
                     ),
-                  ),
+                  ]),
 
                 if (selectedProvince == 'BC')
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF6A1B9A).withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: const Color(0xFF6A1B9A).withValues(alpha: 0.25),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
+                  _sectionCard([
+                    Theme(
+                      data: Theme.of(
+                        context,
+                      ).copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+                        title: Text(
                           _isFr
-                              ? 'Rétractation 3 jours C.-B. (Property Law Act)'
-                              : 'BC 3-Day Rescission (Property Law Act)',
+                              ? 'Rétractation C.-B. (3 jours)'
+                              : 'BC Rescission (3-Day Right)',
                           style: const TextStyle(
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF4A148C),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
+                        subtitle: Text(
                           _isFr
-                              ? 'Annulez une transaction résidentielle en 3 jours avec des frais de 0,25 %.'
-                              : 'Cancel any residential deal in 3 days for a 0.25% fee.',
-                          style: const TextStyle(
+                              ? 'Touchez pour afficher les détails.'
+                              : 'Tap to view details.',
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF4A148C),
-                            height: 1.4,
+                            color: Colors.grey[600],
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _isFr
-                              ? 'Gotcha: c\'est 3 jours ouvrables. Les frais de 0,25 % sont obligatoires et non negociables.'
-                              : 'Gotcha: this is 3 business days. The 0.25% fee is mandatory and cannot be negotiated away.',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF4A148C),
-                            height: 1.35,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        OutlinedButton.icon(
-                          onPressed: () async {
-                            final picked = await showDatePicker(
-                              context: context,
-                              initialDate:
-                                  _bcContractAcceptedDate ?? DateTime.now(),
-                              firstDate: DateTime.now().subtract(
-                                const Duration(days: 365),
-                              ),
-                              lastDate: DateTime.now().add(
-                                const Duration(days: 365),
-                              ),
-                            );
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _isFr
+                                      ? 'Annulez une transaction résidentielle en 3 jours avec des frais de 0,25 %.'
+                                      : 'Cancel any residential deal in 3 days for a 0.25% fee.',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF4A148C),
+                                    height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _isFr
+                                      ? 'Gotcha: c\'est 3 jours ouvrables. Les frais de 0,25 % sont obligatoires et non negociables.'
+                                      : 'Gotcha: this is 3 business days. The 0.25% fee is mandatory and cannot be negotiated away.',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF4A148C),
+                                    height: 1.35,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                OutlinedButton.icon(
+                                  onPressed: () async {
+                                    final picked = await showDatePicker(
+                                      context: context,
+                                      initialDate:
+                                          _bcContractAcceptedDate ??
+                                          DateTime.now(),
+                                      firstDate: DateTime.now().subtract(
+                                        const Duration(days: 365),
+                                      ),
+                                      lastDate: DateTime.now().add(
+                                        const Duration(days: 365),
+                                      ),
+                                    );
 
-                            if (picked != null) {
-                              final purchasePrice =
-                                  double.tryParse(propertyValue) ?? 0;
-                              setState(() => _bcContractAcceptedDate = picked);
-                              checkBcRescission(picked, purchasePrice);
-                            }
-                          },
-                          icon: const Icon(Icons.calendar_today),
-                          label: Text(
-                            _bcContractAcceptedDate == null
-                                ? (_isFr
-                                      ? 'Définir la date d\'acceptation du contrat'
-                                      : 'Set Accepted Contract Date')
-                                : (_isFr
-                                      ? 'Accepté: ${_formatDate(_bcContractAcceptedDate!)}'
-                                      : 'Accepted: ${_formatDate(_bcContractAcceptedDate!)}'),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          (double.tryParse(propertyValue) ?? 0) > 0
-                              ? (_isFr
-                                    ? 'Estimation actuelle des frais 0,25 %: \$${((double.tryParse(propertyValue) ?? 0) * 0.0025).toStringAsFixed(2)}'
-                                    : 'Current 0.25% fee estimate: \$${((double.tryParse(propertyValue) ?? 0) * 0.0025).toStringAsFixed(2)}')
-                              : (_isFr
-                                    ? 'Entrez le prix de vente ci-dessus pour estimer les frais de rétractation de 0,25 %.'
-                                    : 'Enter sale price above to estimate the 0.25% rescission fee.'),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF4A148C),
-                            height: 1.4,
-                          ),
-                        ),
-                        if (_bcContractAcceptedDate != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            _buildBcRescissionMessage(
-                              _bcContractAcceptedDate!,
-                              double.tryParse(propertyValue) ?? 0,
-                            ),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF4A148C),
-                              height: 1.4,
+                                    if (picked != null) {
+                                      final purchasePrice =
+                                          double.tryParse(propertyValue) ?? 0;
+                                      setState(
+                                        () => _bcContractAcceptedDate = picked,
+                                      );
+                                      checkBcRescission(picked, purchasePrice);
+                                    }
+                                  },
+                                  icon: const Icon(Icons.calendar_today),
+                                  label: Text(
+                                    _bcContractAcceptedDate == null
+                                        ? (_isFr
+                                              ? 'Définir la date d\'acceptation du contrat'
+                                              : 'Set Accepted Contract Date')
+                                        : (_isFr
+                                              ? 'Accepté: ${_formatDate(_bcContractAcceptedDate!)}'
+                                              : 'Accepted: ${_formatDate(_bcContractAcceptedDate!)}'),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  (double.tryParse(propertyValue) ?? 0) > 0
+                                      ? (_isFr
+                                            ? 'Estimation actuelle des frais 0,25 %: \$${((double.tryParse(propertyValue) ?? 0) * 0.0025).toStringAsFixed(2)}'
+                                            : 'Current 0.25% fee estimate: \$${((double.tryParse(propertyValue) ?? 0) * 0.0025).toStringAsFixed(2)}')
+                                      : (_isFr
+                                            ? 'Entrez le prix de vente ci-dessus pour estimer les frais de rétractation de 0,25 %.'
+                                            : 'Enter sale price above to estimate the 0.25% rescission fee.'),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF4A148C),
+                                    height: 1.4,
+                                  ),
+                                ),
+                                if (_bcContractAcceptedDate != null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _buildBcRescissionMessage(
+                                      _bcContractAcceptedDate!,
+                                      double.tryParse(propertyValue) ?? 0,
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF4A148C),
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ],
-                      ],
-                    ),
-                  ),
-
-                if (selectedProvince == 'ON')
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1565C0).withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: const Color(0xFF1565C0).withValues(alpha: 0.25),
                       ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
+                  ]),
+
+                if (selectedProvince == 'ON')
+                  _sectionCard([
+                    Theme(
+                      data: Theme.of(
+                        context,
+                      ).copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+                        title: const Text(
                           'Ontario 10-Day Cooling-Off Timer',
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF0D47A1),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Text(
-                              'Property Type:',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF0D47A1),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            ChoiceChip(
-                              label: const Text('Condo'),
-                              selected: _ontarioIsCondo,
-                              onSelected: (selected) {
-                                if (!selected) return;
-                                setState(() => _ontarioIsCondo = true);
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            ChoiceChip(
-                              label: const Text('House'),
-                              selected: !_ontarioIsCondo,
-                              onSelected: (selected) {
-                                if (!selected) return;
-                                setState(() => _ontarioIsCondo = false);
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          getOntarioAdvice(_ontarioIsCondo),
-                          style: const TextStyle(
+                        subtitle: Text(
+                          _isFr
+                              ? 'Touchez pour afficher les détails.'
+                              : 'Tap to view details.',
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF0D47A1),
-                            height: 1.4,
+                            color: Colors.grey[600],
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        OutlinedButton.icon(
-                          onPressed: () async {
-                            final picked = await showDatePicker(
-                              context: context,
-                              initialDate:
-                                  _ontarioDocsReceivedDate ?? DateTime.now(),
-                              firstDate: DateTime.now().subtract(
-                                const Duration(days: 365),
-                              ),
-                              lastDate: DateTime.now().add(
-                                const Duration(days: 365),
-                              ),
-                            );
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'Property Type:',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF0D47A1),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    ChoiceChip(
+                                      label: const Text('Condo'),
+                                      selected: _ontarioIsCondo,
+                                      onSelected: (selected) {
+                                        if (!selected) return;
+                                        setState(() => _ontarioIsCondo = true);
+                                      },
+                                    ),
+                                    const SizedBox(width: 8),
+                                    ChoiceChip(
+                                      label: const Text('House'),
+                                      selected: !_ontarioIsCondo,
+                                      onSelected: (selected) {
+                                        if (!selected) return;
+                                        setState(() => _ontarioIsCondo = false);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  getOntarioAdvice(_ontarioIsCondo),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF0D47A1),
+                                    height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                OutlinedButton.icon(
+                                  onPressed: () async {
+                                    final picked = await showDatePicker(
+                                      context: context,
+                                      initialDate:
+                                          _ontarioDocsReceivedDate ??
+                                          DateTime.now(),
+                                      firstDate: DateTime.now().subtract(
+                                        const Duration(days: 365),
+                                      ),
+                                      lastDate: DateTime.now().add(
+                                        const Duration(days: 365),
+                                      ),
+                                    );
 
-                            if (picked != null) {
-                              setState(() => _ontarioDocsReceivedDate = picked);
-                              checkOntarioCoolingOff(picked);
-                            }
-                          },
-                          icon: const Icon(Icons.calendar_today),
-                          label: Text(
-                            _ontarioDocsReceivedDate == null
-                                ? 'Set Date Received (All Docs)'
-                                : 'Date Received: ${_formatDate(_ontarioDocsReceivedDate!)}',
-                          ),
-                        ),
-                        if (_ontarioDocsReceivedDate != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            _buildOntarioCoolingOffMessage(
-                              _ontarioDocsReceivedDate!,
-                            ),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF0D47A1),
-                              height: 1.4,
+                                    if (picked != null) {
+                                      setState(
+                                        () => _ontarioDocsReceivedDate = picked,
+                                      );
+                                      checkOntarioCoolingOff(picked);
+                                    }
+                                  },
+                                  icon: const Icon(Icons.calendar_today),
+                                  label: Text(
+                                    _ontarioDocsReceivedDate == null
+                                        ? 'Set Date Received (All Docs)'
+                                        : 'Date Received: ${_formatDate(_ontarioDocsReceivedDate!)}',
+                                  ),
+                                ),
+                                if (_ontarioDocsReceivedDate != null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _buildOntarioCoolingOffMessage(
+                                      _ontarioDocsReceivedDate!,
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF0D47A1),
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ],
-                      ],
+                      ),
                     ),
-                  ),
+                  ]),
 
                 // ── Free Trial Counter ─────────────────────────────────
                 if (!isPremium)
@@ -2801,18 +3249,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _navigateToBuyerQaMatrix,
-                    icon: const Icon(Icons.rule_folder_outlined),
-                    label: Text(
-                      _isFr
-                          ? 'Matrice QA acheteur (ON/QC/BC)'
-                          : 'Buyer QA Matrix (ON/QC/BC)',
-                    ),
-                  ),
-                ),
                 if (!_releaseSafeMode) ...[
                   const SizedBox(height: 10),
                   SizedBox(
@@ -2839,54 +3275,6 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _copyLaunchChecklist,
-                    icon: const Icon(Icons.copy_all_outlined),
-                    label: Text(
-                      _isFr
-                          ? 'Copier checklist lancement'
-                          : 'Copy Launch Checklist',
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _navigateToSettings,
-                    icon: const Icon(Icons.settings_outlined),
-                    label: Text(_isFr ? 'Parametres' : 'Settings'),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _navigateToLaunchReadiness,
-                    icon: const Icon(Icons.task_alt_outlined),
-                    label: Text(
-                      _isFr
-                          ? 'Etat de preparation lancement'
-                          : 'Launch Readiness',
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _navigateToStoreSubmissionText,
-                    icon: const Icon(Icons.storefront_outlined),
-                    label: Text(
-                      _isFr
-                          ? 'Texte de soumission magasin'
-                          : 'Store Submission Text',
-                    ),
-                  ),
-                ),
 
                 // ── Premium Upgrade ────────────────────────────────────
                 if (!isPremium) ...[

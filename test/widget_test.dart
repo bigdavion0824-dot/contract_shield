@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -19,8 +20,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Contract Shield'), findsWidgets);
-    expect(find.text('Store Submission Text'), findsOneWidget);
     expect(find.text('Runtime Diagnostics'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('home_quick_menu')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Store Submission Text'), findsOneWidget);
   });
 
   testWidgets('Release-safe mode hides debug-only home actions', (
@@ -31,9 +36,13 @@ void main() {
     await tester.pumpWidget(const MyApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('Store Submission Text'), findsOneWidget);
     expect(find.text('Analytics Dashboard (Debug)'), findsNothing);
     expect(find.text('Runtime Diagnostics'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('home_quick_menu')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Store Submission Text'), findsOneWidget);
   });
 
   test('Runtime diagnostics stores and clears errors', () async {
