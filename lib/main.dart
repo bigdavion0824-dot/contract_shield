@@ -809,6 +809,10 @@ class _HomePageState extends State<HomePage> {
     return _calculatedPropertyValue * (_calculatedCommissionRate / 100);
   }
 
+  double get _listingAgentCommission => commissionSavings * 0.5;
+
+  double get _buyerAgentCommission => commissionSavings * 0.5;
+
   double get autoClosingCosts {
     return _calculatedPropertyValue *
         (_calculatedProvinceClosingCostRate / 100);
@@ -1935,6 +1939,14 @@ class _HomePageState extends State<HomePage> {
                           : 'Estimated real estate agent commission',
                       '\$${commissionSavings.toStringAsFixed(2)}',
                     ),
+                    _savingsRow(
+                      'Listing agent commission (est.)',
+                      '\$${_listingAgentCommission.toStringAsFixed(2)}',
+                    ),
+                    _savingsRow(
+                      'Buyer agent commission (est.)',
+                      '\$${_buyerAgentCommission.toStringAsFixed(2)}',
+                    ),
                     const Divider(height: 1),
                     // Estimated closing costs row
                     _savingsRow(
@@ -1971,6 +1983,15 @@ class _HomePageState extends State<HomePage> {
                         style: TextStyle(fontSize: 12, color: Colors.black54),
                       ),
                     ),
+                    _savingsRow(
+                      'Listing agent commission (est.)',
+                      '\$${_listingAgentCommission.toStringAsFixed(2)}',
+                    ),
+                    _savingsRow(
+                      'Buyer agent commission (est.)',
+                      '\$${_buyerAgentCommission.toStringAsFixed(2)}',
+                    ),
+                    const Divider(height: 20),
                     _sellerShareSlider(
                       label: 'Legal / notary',
                       value: _sellerLegalNotaryShare,
