@@ -126,6 +126,9 @@ class AdMobHelper {
 class InAppPurchaseHelper {
   static const String singleScanProductId = 'com.contractshield.scan_single';
   static const String monthlyProProductId = 'com.contractshield.pro_monthly';
+  static const String annualProProductId = 'com.contractshield.pro_annual';
+  static const String monthlyProDisplayPrice = 'C\$9.99/month';
+  static const String annualProDisplayPrice = 'C\$79.99/year';
 
   static final InAppPurchase _iap = InAppPurchase.instance;
 
@@ -139,10 +142,12 @@ class InAppPurchaseHelper {
     }
   }
 
-  static Future<void> buyPremium() async {
+  static Future<void> buyPremium({
+    String productId = monthlyProProductId,
+  }) async {
     try {
       final ProductDetailsResponse response = await _iap.queryProductDetails({
-        monthlyProProductId,
+        productId,
       });
 
       if (response.notFoundIDs.isNotEmpty) {
@@ -778,7 +783,8 @@ class _HomePageState extends State<HomePage> {
       _purchaseSubscription = InAppPurchase.instance.purchaseStream.listen(
         (purchases) {
           for (final purchase in purchases) {
-            if (purchase.productID == InAppPurchaseHelper.monthlyProProductId) {
+            if (purchase.productID == InAppPurchaseHelper.monthlyProProductId ||
+                purchase.productID == InAppPurchaseHelper.annualProProductId) {
               if (purchase.status == PurchaseStatus.purchased) {
                 unawaited(_handlePurchaseSuccess());
               }
@@ -1162,7 +1168,9 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(AppStrings.get('premiumFeature', widget.language)),
-        content: Text(AppStrings.get('upgradeToPremium', widget.language)),
+        content: Text(
+          '${AppStrings.get('upgradeToPremium', widget.language)}\n\n$_premiumPricePitch',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1375,6 +1383,10 @@ class _HomePageState extends State<HomePage> {
 
   bool get _isFr => widget.language == 'fr';
 
+  String get _premiumPricePitch => _isFr
+      ? 'Prix Pro recommande: C\$9,99/mois (C\$79,99/an a venir).'
+      : 'Recommended Pro price: ${InAppPurchaseHelper.monthlyProDisplayPrice} (${InAppPurchaseHelper.annualProDisplayPrice} coming soon).';
+
   String get _regionalRightsTitle => _isFr
       ? 'Droits de retrait régionaux (au 31 mars 2026)'
       : 'Regional Exit Rights (As of Mar 31, 2026)';
@@ -1481,6 +1493,67 @@ class _HomePageState extends State<HomePage> {
             divisions: 100,
             label: '${(value * 100).toStringAsFixed(1)}%',
             onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _premiumInsightsLockedCard() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFFFB300).withValues(alpha: 0.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.lock, color: Color(0xFFBF360C)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _isFr
+                      ? 'Analyses avancees (Premium)'
+                      : 'Advanced Insights (Premium)',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFBF360C),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _isFr
+                ? 'Debloquez: ventilation detaillee vendeur, ajustement des parts de commission, curseurs de postes de couts et net apres solde hypothecaire.'
+                : 'Unlock: seller cost line-by-line breakdown, editable commission split, adjustable cost sliders, and net after mortgage payoff.',
+            style: const TextStyle(fontSize: 12.5, color: Color(0xFF5D4037)),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _premiumPricePitch,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF6D4C41),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _openPremiumWithFeedback,
+              icon: const Icon(Icons.star),
+              label: Text(_isFr ? 'Passer a Premium' : 'Upgrade to Premium'),
+            ),
           ),
         ],
       ),
@@ -1998,14 +2071,30 @@ class _HomePageState extends State<HomePage> {
                           : 'Estimated real estate agent commission',
                       '\$${commissionSavings.toStringAsFixed(2)}',
                     ),
-                    _savingsRow(
-                      'Listing agent commission (${(_listingAgentShare * 100).toStringAsFixed(1)}%)',
-                      '\$${_listingAgentCommission.toStringAsFixed(2)}',
-                    ),
-                    _savingsRow(
-                      'Buyer agent commission (${(_buyerAgentShare * 100).toStringAsFixed(1)}%)',
-                      '\$${_buyerAgentCommission.toStringAsFixed(2)}',
-                    ),
+                    if (isPremium) ...[
+                      _savingsRow(
+                        'Listing agent commission (${(_listingAgentShare * 100).toStringAsFixed(1)}%)',
+                        '\$${_listingAgentCommission.toStringAsFixed(2)}',
+                      ),
+                      _savingsRow(
+                        'Buyer agent commission (${(_buyerAgentShare * 100).toStringAsFixed(1)}%)',
+                        '\$${_buyerAgentCommission.toStringAsFixed(2)}',
+                      ),
+                    ] else ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                        child: Text(
+                          _isFr
+                              ? 'La repartition de commission (vendeur/acheteur) est disponible avec Premium.'
+                              : 'Commission split details (listing vs buyer) are available in Premium.',
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                     const Divider(height: 1),
                     // Estimated closing costs row
                     _savingsRow(
@@ -2020,145 +2109,153 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ],
                   ]),
-                  _sectionHeader('Seller Cost Breakdown'),
+                  _sectionHeader(
+                    isPremium ? 'Seller Cost Breakdown' : 'Premium Insights',
+                  ),
                   _sectionCard([
-                    const Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: Text(
-                        'Estimated Seller Cost Breakdown',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
+                    if (!isPremium) _premiumInsightsLockedCard(),
+                    if (isPremium) ...[
+                      const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Text(
+                          'Estimated Seller Cost Breakdown',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(16, 0, 16, 6),
-                      child: Text(
-                        'Adjust breakdown percentages',
-                        style: TextStyle(fontSize: 12, color: Colors.black54),
-                      ),
-                    ),
-                    _sellerShareSlider(
-                      label: 'Listing agent split',
-                      value: _listingAgentShare,
-                      onChanged: (value) {
-                        setState(() => _listingAgentShare = value);
-                      },
-                    ),
-                    _savingsRow(
-                      'Listing agent commission (${(_listingAgentShare * 100).toStringAsFixed(1)}%)',
-                      '\$${_listingAgentCommission.toStringAsFixed(2)}',
-                    ),
-                    _savingsRow(
-                      'Buyer agent commission (${(_buyerAgentShare * 100).toStringAsFixed(1)}%)',
-                      '\$${_buyerAgentCommission.toStringAsFixed(2)}',
-                    ),
-                    const Divider(height: 20),
-                    _sellerShareSlider(
-                      label: 'Legal / notary',
-                      value: _sellerLegalNotaryShare,
-                      onChanged: (value) {
-                        setState(() => _sellerLegalNotaryShare = value);
-                      },
-                    ),
-                    _sellerShareSlider(
-                      label: 'Mortgage discharge / admin',
-                      value: _sellerMortgageDischargeShare,
-                      onChanged: (value) {
-                        setState(() => _sellerMortgageDischargeShare = value);
-                      },
-                    ),
-                    _sellerShareSlider(
-                      label: 'Moving / setup buffer',
-                      value: _sellerMovingSetupShare,
-                      onChanged: (value) {
-                        setState(() => _sellerMovingSetupShare = value);
-                      },
-                    ),
-                    if (_sellerUnallocatedShare > 0)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(16, 0, 16, 6),
                         child: Text(
-                          'Current slider total is ${(100 + (_sellerUnallocatedShare * 100)).toStringAsFixed(1)}%. Values are automatically normalized to 100%.',
-                          style: const TextStyle(
-                            color: Color(0xFFC62828),
+                          'Adjust breakdown percentages',
+                          style: TextStyle(fontSize: 12, color: Colors.black54),
+                        ),
+                      ),
+                      _sellerShareSlider(
+                        label: 'Listing agent split',
+                        value: _listingAgentShare,
+                        onChanged: (value) {
+                          setState(() => _listingAgentShare = value);
+                        },
+                      ),
+                      _savingsRow(
+                        'Listing agent commission (${(_listingAgentShare * 100).toStringAsFixed(1)}%)',
+                        '\$${_listingAgentCommission.toStringAsFixed(2)}',
+                      ),
+                      _savingsRow(
+                        'Buyer agent commission (${(_buyerAgentShare * 100).toStringAsFixed(1)}%)',
+                        '\$${_buyerAgentCommission.toStringAsFixed(2)}',
+                      ),
+                      const Divider(height: 20),
+                      _sellerShareSlider(
+                        label: 'Legal / notary',
+                        value: _sellerLegalNotaryShare,
+                        onChanged: (value) {
+                          setState(() => _sellerLegalNotaryShare = value);
+                        },
+                      ),
+                      _sellerShareSlider(
+                        label: 'Mortgage discharge / admin',
+                        value: _sellerMortgageDischargeShare,
+                        onChanged: (value) {
+                          setState(() => _sellerMortgageDischargeShare = value);
+                        },
+                      ),
+                      _sellerShareSlider(
+                        label: 'Moving / setup buffer',
+                        value: _sellerMovingSetupShare,
+                        onChanged: (value) {
+                          setState(() => _sellerMovingSetupShare = value);
+                        },
+                      ),
+                      if (_sellerUnallocatedShare > 0)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                          child: Text(
+                            'Current slider total is ${(100 + (_sellerUnallocatedShare * 100)).toStringAsFixed(1)}%. Values are automatically normalized to 100%.',
+                            style: const TextStyle(
+                              color: Color(0xFFC62828),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      _savingsRow(
+                        'Legal / notary (${(_sellerLegalNotaryShare * 100).toStringAsFixed(1)}%)',
+                        '\$${_sellerLegalNotaryEstimate.toStringAsFixed(2)}',
+                      ),
+                      _savingsRow(
+                        'Mortgage discharge / admin (${(_sellerMortgageDischargeShare * 100).toStringAsFixed(1)}%)',
+                        '\$${_sellerMortgageDischargeEstimate.toStringAsFixed(2)}',
+                      ),
+                      _savingsRow(
+                        'Moving / setup buffer (${(_sellerMovingSetupShare * 100).toStringAsFixed(1)}%)',
+                        '\$${_sellerMovingSetupEstimate.toStringAsFixed(2)}',
+                      ),
+                      _savingsRow(
+                        'Other closing items (${(_sellerRemainderShare * 100).toStringAsFixed(1)}%)',
+                        '\$${_sellerTaxAdjustmentsEstimate.toStringAsFixed(2)}',
+                      ),
+                      const Divider(height: 20),
+                      _savingsRow(
+                        'Estimated total seller costs',
+                        '\$${_estimatedSellerCostsTotal.toStringAsFixed(2)}',
+                      ),
+                      _savingsRow(
+                        'Estimated net before mortgage payoff',
+                        '\$${_estimatedSellerNetBeforeMortgage.toStringAsFixed(2)}',
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                        child: TextFormField(
+                          controller: _remainingMortgageController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'Remaining mortgage balance',
+                            hintText: 'e.g., 245000',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              remainingMortgageBalance = value;
+                            });
+                          },
+                        ),
+                      ),
+                      _savingsRow(
+                        'Estimated net after mortgage payoff',
+                        '\$${_estimatedSellerNetAfterMortgage.toStringAsFixed(2)}',
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+                        child: Text(
+                          'For buying-cost line items (land transfer tax, legal/notary, inspection, appraisal, insurance, and cash needed), open Down Payment & Buyer Costs.',
+                          style: TextStyle(
+                            color: Colors.grey[700],
                             fontSize: 12,
                           ),
                         ),
                       ),
-                    _savingsRow(
-                      'Legal / notary (${(_sellerLegalNotaryShare * 100).toStringAsFixed(1)}%)',
-                      '\$${_sellerLegalNotaryEstimate.toStringAsFixed(2)}',
-                    ),
-                    _savingsRow(
-                      'Mortgage discharge / admin (${(_sellerMortgageDischargeShare * 100).toStringAsFixed(1)}%)',
-                      '\$${_sellerMortgageDischargeEstimate.toStringAsFixed(2)}',
-                    ),
-                    _savingsRow(
-                      'Moving / setup buffer (${(_sellerMovingSetupShare * 100).toStringAsFixed(1)}%)',
-                      '\$${_sellerMovingSetupEstimate.toStringAsFixed(2)}',
-                    ),
-                    _savingsRow(
-                      'Other closing items (${(_sellerRemainderShare * 100).toStringAsFixed(1)}%)',
-                      '\$${_sellerTaxAdjustmentsEstimate.toStringAsFixed(2)}',
-                    ),
-                    const Divider(height: 20),
-                    _savingsRow(
-                      'Estimated total seller costs',
-                      '\$${_estimatedSellerCostsTotal.toStringAsFixed(2)}',
-                    ),
-                    _savingsRow(
-                      'Estimated net before mortgage payoff',
-                      '\$${_estimatedSellerNetBeforeMortgage.toStringAsFixed(2)}',
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                      child: TextFormField(
-                        controller: _remainingMortgageController,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        decoration: const InputDecoration(
-                          labelText: 'Remaining mortgage balance',
-                          hintText: 'e.g., 245000',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                        onChanged: (value) {
-                          setState(() {
-                            remainingMortgageBalance = value;
-                          });
-                        },
-                      ),
-                    ),
-                    _savingsRow(
-                      'Estimated net after mortgage payoff',
-                      '\$${_estimatedSellerNetAfterMortgage.toStringAsFixed(2)}',
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
-                      child: Text(
-                        'For buying-cost line items (land transfer tax, legal/notary, inspection, appraisal, insurance, and cash needed), open Down Payment & Buyer Costs.',
-                        style: TextStyle(color: Colors.grey[700], fontSize: 12),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: _navigateToBuyerCosts,
-                          icon: const Icon(
-                            Icons.account_balance_wallet_outlined,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _navigateToBuyerCosts,
+                            icon: const Icon(
+                              Icons.account_balance_wallet_outlined,
+                            ),
+                            label: const Text('Open Buyer Cost Breakdown'),
                           ),
-                          label: const Text('Open Buyer Cost Breakdown'),
                         ),
                       ),
-                    ),
+                    ],
                   ]),
                 ] else
                   _sectionCard([
@@ -2804,7 +2901,11 @@ class _HomePageState extends State<HomePage> {
                     child: ElevatedButton.icon(
                       onPressed: _openPremiumWithFeedback,
                       icon: const Icon(Icons.star),
-                      label: const Text('Unlock Premium'),
+                      label: Text(
+                        _isFr
+                            ? 'Premium C\$9,99/mois'
+                            : 'Unlock Premium • C\$9.99/mo',
+                      ),
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 50),
                       ),
@@ -7609,6 +7710,7 @@ class _PaywallPageState extends State<PaywallPage> {
   static const _productOrder = [
     InAppPurchaseHelper.singleScanProductId,
     InAppPurchaseHelper.monthlyProProductId,
+    InAppPurchaseHelper.annualProProductId,
   ];
 
   @override
@@ -7816,7 +7918,8 @@ class _PaywallPageState extends State<PaywallPage> {
             params: {'product_id': purchase.productID},
           ),
         );
-        if (purchase.productID == InAppPurchaseHelper.monthlyProProductId) {
+        if (purchase.productID == InAppPurchaseHelper.monthlyProProductId ||
+            purchase.productID == InAppPurchaseHelper.annualProProductId) {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('isPremium', true);
           if (mounted) {
@@ -7922,6 +8025,11 @@ class _PaywallPageState extends State<PaywallPage> {
           ? 'Premium mensuel avec calculs illimités et accès complet.'
           : 'Monthly Pro with unlimited saves and full access.';
     }
+    if (product.id == InAppPurchaseHelper.annualProProductId) {
+      return _isFr
+          ? 'Premium annuel avec accès complet et meilleure valeur.'
+          : 'Annual Pro with full access and best value.';
+    }
     return product.description;
   }
 
@@ -7968,8 +8076,8 @@ class _PaywallPageState extends State<PaywallPage> {
                 const SizedBox(height: 8),
                 Text(
                   _isFr
-                      ? 'Choisissez un achat unique ou l\'abonnement mensuel Pro.'
-                      : 'Choose a one-time scan or monthly Pro subscription.',
+                      ? 'Choisissez un achat unique, Pro mensuel ou Pro annuel. Prix recommandés: C\$9,99/mois ou C\$79,99/an.'
+                      : 'Choose a one-time scan, monthly Pro, or annual Pro. Recommended prices: ${InAppPurchaseHelper.monthlyProDisplayPrice} or ${InAppPurchaseHelper.annualProDisplayPrice}.',
                 ),
               ],
             ),
@@ -7990,8 +8098,11 @@ class _PaywallPageState extends State<PaywallPage> {
             )
           else
             ..._products.map((product) {
-              final isPro =
+              final isMonthlyPro =
                   product.id == InAppPurchaseHelper.monthlyProProductId;
+              final isAnnualPro =
+                  product.id == InAppPurchaseHelper.annualProProductId;
+              final isPro = isMonthlyPro || isAnnualPro;
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -8030,6 +8141,36 @@ class _PaywallPageState extends State<PaywallPage> {
                                   _descriptionForProduct(product),
                                   style: TextStyle(color: Colors.grey[700]),
                                 ),
+                                if (isPro)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF1E88E5,
+                                        ).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        isMonthlyPro
+                                            ? (_isFr
+                                                  ? 'Recommande: C\$9,99/mois'
+                                                  : 'Recommended: C\$9.99/month')
+                                            : (_isFr
+                                                  ? 'Meilleure valeur: C\$79,99/an'
+                                                  : 'Best value: C\$79.99/year'),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF0D47A1),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
