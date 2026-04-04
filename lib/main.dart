@@ -704,6 +704,8 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String propertyValue = '';
   double commissionRate = 5.0;
+  final TextEditingController _commissionRateController =
+      TextEditingController();
   String closingCosts = '';
   String selectedProvince = 'ON';
   bool closingCostsManuallyEdited = false;
@@ -722,6 +724,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _commissionRateController.text = _formatCommissionRate(commissionRate);
     _loadSavedData();
     _initializeAds();
     _setupInAppPurchaseListeners();
@@ -803,6 +806,64 @@ class _HomePageState extends State<HomePage> {
 
   double get totalSavings => commissionSavings + closingCostSavings;
 
+  String _formatCommissionRate(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toStringAsFixed(0);
+    }
+    return value.toStringAsFixed(1);
+  }
+
+  void _adjustCommissionRate(double delta) {
+    final nextRate = (commissionRate + delta).clamp(1.0, 7.0).toDouble();
+    setState(() {
+      commissionRate = double.parse(nextRate.toStringAsFixed(1));
+    });
+    _syncCommissionRateField();
+  }
+
+  void _syncCommissionRateField() {
+    final formatted = _formatCommissionRate(commissionRate);
+    if (_commissionRateController.text == formatted) {
+      return;
+    }
+    _commissionRateController.value = TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+
+  void _onCommissionRateChanged(String rawValue) {
+    final value = rawValue.trim();
+    if (value.isEmpty) {
+      return;
+    }
+
+    final parsed = double.tryParse(value);
+    if (parsed == null || parsed < 1.0 || parsed > 7.0) {
+      return;
+    }
+
+    setState(() {
+      commissionRate = double.parse(parsed.toStringAsFixed(1));
+    });
+  }
+
+  void _commitCommissionRateInput() {
+    final value = _commissionRateController.text.trim();
+    final parsed = double.tryParse(value);
+
+    if (parsed == null) {
+      _syncCommissionRateField();
+      return;
+    }
+
+    final clamped = parsed.clamp(1.0, 7.0).toDouble();
+    setState(() {
+      commissionRate = double.parse(clamped.toStringAsFixed(1));
+    });
+    _syncCommissionRateField();
+  }
+
   void _saveCalculation() async {
     try {
       if (!isPremium && calculationCount >= maxFreeCalculations) {
@@ -822,7 +883,7 @@ class _HomePageState extends State<HomePage> {
       final provinceName =
           CanadaProvinceRates.labels[selectedProvince] ?? selectedProvince;
       final calc =
-          'Province: $provinceName, Property: \$$propertyValue, Commission: ${commissionRate.toStringAsFixed(1)}%, Savings: \$${totalSavings.toStringAsFixed(2)}';
+          'Province: $provinceName, Property: \$$propertyValue, Commission: ${_formatCommissionRate(commissionRate)}%, Savings: \$${totalSavings.toStringAsFixed(2)}';
       savedCalculations.add(calc);
       calculationCount++;
       await prefs.setStringList('calculations', savedCalculations);
@@ -1335,10 +1396,12 @@ class _HomePageState extends State<HomePage> {
         closingCosts = '';
       }
     });
+    _syncCommissionRateField();
   }
 
   @override
   void dispose() {
+    _commissionRateController.dispose();
     _purchaseSubscription?.cancel();
     bannerAd?.dispose();
     AdMobHelper.dispose();
@@ -1525,25 +1588,49 @@ class _HomePageState extends State<HomePage> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Agent Commission: ${commissionRate.toInt()}%',
+                            'Agent Commission: ${_formatCommissionRate(commissionRate)}%',
                             style: const TextStyle(fontSize: 16),
                           ),
                         ),
                         IconButton(
                           icon: const Icon(Icons.remove_circle_outline),
                           color: const Color(0xFF1E88E5),
-                          onPressed: commissionRate > 1
-                              ? () => setState(() => commissionRate--)
+                          onPressed: commissionRate > 1.0
+                              ? () => _adjustCommissionRate(-0.5)
                               : null,
                         ),
                         IconButton(
                           icon: const Icon(Icons.add_circle_outline),
                           color: const Color(0xFF1E88E5),
-                          onPressed: commissionRate < 7
-                              ? () => setState(() => commissionRate++)
+                          onPressed: commissionRate < 7.0
+                              ? () => _adjustCommissionRate(0.5)
                               : null,
                         ),
                       ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    child: TextFormField(
+                      controller: _commissionRateController,
+                      decoration: const InputDecoration(
+                        labelText: 'Enter commission %',
+                        hintText: 'e.g., 2.5',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      textInputAction: TextInputAction.done,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*\.?\d{0,1}$'),
+                        ),
+                      ],
+                      onChanged: _onCommissionRateChanged,
+                      onEditingComplete: _commitCommissionRateInput,
+                      onFieldSubmitted: (_) => _commitCommissionRateInput(),
                     ),
                   ),
                   Padding(
