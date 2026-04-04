@@ -1293,11 +1293,19 @@ class _HomePageState extends State<HomePage> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 15)),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 15),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 12),
           Text(
             value,
+            textAlign: TextAlign.right,
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
@@ -1583,7 +1591,10 @@ class _HomePageState extends State<HomePage> {
                         )
                         .toList(),
                     onChanged: (value) {
-                      if (value != null) _setProvinceDefaults(value);
+                      if (value != null) {
+                        _setProvinceDefaults(value);
+                        FocusScope.of(context).unfocus();
+                      }
                     },
                   ),
                   const Divider(height: 1),
